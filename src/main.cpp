@@ -11,6 +11,62 @@ extern "C"{
 	#include<0202lcd.h>
 	#include<V91magswipe.h>
 	#include <header.h>
+	#include<printer.h>
+}
+void Billing(){
+	printf("Billing\n");
+}
+void Reports(){
+	printf("Reports\n");
+}
+void Master(){
+	printf("Master\n");
+}
+void Settings(){
+	printf("Settings\n");
+}
+void main_menu(const char* user, const char* pwd)
+{
+	MENU_T menu;
+    int opt=0;
+    int selItem  = 0;
+    int acceptKbdEvents=0;
+
+	while(1)
+	{
+		lk_dispclr();
+        menu.start                      = 0;
+        menu.maxEntries                 = 4;
+    	strcpy(menu.menu[0],"Billing");
+    	strcpy(menu.menu[1],"Reports");
+		strcpy(menu.menu[2],"Master");
+    	strcpy(menu.menu[3],"Settings");
+			while(1)
+			{
+          
+        	lk_dispclr();
+            opt = scroll_menu(&menu,&selItem,acceptKbdEvents);
+            	switch(opt){
+					case CANCEL:
+					break;
+                  
+                   	case ENTER:
+
+                		switch (selItem+1)
+                		{
+                   		        case 1: Billing();
+                   		        break;
+                        		case 2: Reports();
+                        		break;
+                        		case 3: Master();
+                        		break;
+                        		case 4:	Settings();
+                        		break;
+                		}
+            			break;
+            	}
+        	}
+	}
 }
 
 int main(int argc, const char* argv[])
@@ -52,32 +108,57 @@ int main(int argc, const char* argv[])
         menu.start                      = 0;
         menu.maxEntries                 = 20;
 	                                                                              
-	strcpy(menu.title,"MAIN MENU");       
-	    strcpy(menu.menu[0],"LCD");
-	    strcpy(menu.menu[1],"Keypad");
-	    strcpy(menu.menu[2],"Printer");
-	    strcpy(menu.menu[3],"Date & Time");
-	    strcpy(menu.menu[4],"Battery");
-	    strcpy(menu.menu[5],"USB Host");
-	    strcpy(menu.menu[6],"Machine Id");
-	    strcpy(menu.menu[7],"JFFS2");
-	    strcpy(menu.menu[8],"Software Details");
-	    strcpy(menu.menu[9],"RFID");
-	strcpy(menu.menu[10],"IFD");
-        strcpy(menu.menu[11],"SAM");
-        strcpy(menu.menu[12],"Magnetic Head" );
-	strcpy(menu.menu[13],"Audio");
-	strcpy(menu.menu[14],"Communication");
-	strcpy(menu.menu[15],"MicroSD Card");
-	strcpy(menu.menu[16],"Download");
-	strcpy(menu.menu[17],"console");
-	strcpy(menu.menu[18],"Shutdown");
-	strcpy(menu.menu[19],"Bash");
-	while(1){
-          
-        	lk_dispclr();
-           	opt = scroll_menu(&menu,&selItem,acceptKbdEvents);
+	strcpy(menu.title,"Login");       
+	    
+	int res=0;
+	prn_open();
+
+	lk_bkl_timeout(20);
+	lk_dispclr();
+	lcd::DisplayText(1,0,"1.User Menu ",0);
+	lcd::DisplayText(4,0,"Press any key",0);
+	lk_getkey();
+
+	while(1)
+	{
+		char user[10]={0};
+		lk_dispclr();
+		lcd::DisplayText(2,0,"Enter Username",0);
+		res=lk_getalpha(4,0,(unsigned char *)user,9,strlen(user),0);
+		if(res>0)
+		{
+			user[res]='\0';
+
+			printf("Username is %s %d\n",user,res);
+			if(strcmp(user,"0123")==0)
+			{
+				while(1)
+				{
+					char pwd[10]={0};
+					lk_dispclr();
+					lcd::DisplayText(2,0,"Enter Password",0);
+					res=lk_getpassword((unsigned char *)pwd,4,9);
+					if (res>0)
+					{
+						pwd[res]='\0';
+						printf("Password is %s %d\n",pwd,res);
+						if(strcmp(pwd,"0123")==0)
+						{
+							main_menu(user,pwd);
+						}
+					}
+				}
+			}
+		}
 	}
+
+LOGIN_SUCCESS:
+	lk_dispclr();
+	lcd::DisplayText(2,4,"Login Success",1);
+	sleep(2);
+
+	return 0;
+}
 	// try
 	// {
  //    // Open a database file
@@ -101,6 +182,22 @@ int main(int argc, const char* argv[])
 	// {
  //    std::cout << "exception: " << e.what() << std::endl;
 	// }
-}
+
+// 			lk_dispclr();
+//     	strcpy(menu.menu[1],"Billing");
+//     		strcpy(menu.menu[2],"Pay Collection");
+//     		strcpy(menu.menu[3],"POS");
+//     	strcpy(menu.menu[4],"Reports");
+//     		strcpy(menu.menu[5],"Daily Collection Report");
+//     		strcpy(menu.menu[6],"Consolidated Report");
+//     		strcpy(menu.menu[7],"Customer Wise Report");
+// 		strcpy(menu.menu[8],"Master");
+//     		strcpy(menu.menu[9],"Customer");
+// 			strcpy(menu.menu[10],"Item");
+//     	strcpy(menu.menu[11],"Settings");
+//     		strcpy(menu.menu[12],"User Rights" );
+// 			strcpy(menu.menu[13],"Download");
+// 			strcpy(menu.menu[14],"Upload");
+// }
 
 
