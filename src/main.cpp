@@ -10,6 +10,7 @@ extern "C"{
 	#include<X6x8.h>
 	#include<0202lcd.h>
 	#include<V91magswipe.h>
+	#include <header.h>
 }
 
 int main(int argc, const char* argv[])
@@ -75,8 +76,8 @@ int main(int argc, const char* argv[])
 	while(1){
           
         	lk_dispclr();
-               	opt = scroll_menu(&menu,&selItem,acceptKbdEvents);
-}
+           	opt = scroll_menu(&menu,&selItem,acceptKbdEvents);
+	}
 	// try
 	// {
  //    // Open a database file
