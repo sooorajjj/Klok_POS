@@ -4,21 +4,25 @@
 #include <stdlib.h>
 #include <SQLiteCpp/SQLiteCpp.h> 
 
+#include "Visiontek.hpp"
+
 extern "C"{
 	#include<X6x8.h>
 	#include<0202lcd.h>
 	#include<V91magswipe.h>
 }
 
+
+
 int main(int argc, const char* argv[])
 {
 	lk_open();
 	mscr_open();
 	lk_dispclr();
-	lk_dispfont(&(X6x8_bits[0]),6) ;
-
+	lk_dispfont(&(X6x8_bits[0]),6);
 	lk_lcdintensity(24);
-	lk_disptext(0,0,(unsigned char *)"Klok Innovations",1);
+	
+	lcd::DisplayText(0,0,"Klok Innovations",1);
 
 	while(1);
 	// try
