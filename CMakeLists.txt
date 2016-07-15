@@ -4,8 +4,13 @@ cmake_minimum_required(VERSION 2.8)
 project(KlokPOS)
 
 include_directories(
+  "lib/visiontek/inc"
   "lib/SQLiteCpp/include"
   "include")
+
+link_directories(
+	"../lib/visiontek/lib"
+)
 
 add_subdirectory("lib/SQLiteCpp")
 
@@ -14,4 +19,4 @@ set(CMAKE_CXX_COMPILER "/home/klok/GL14-SDK/TOOL_CHAIN/gcc-4.1.2-glibc-2.5-nptl-
 
 add_executable(firmware src/main.cpp)
 
-target_link_libraries(firmware SQLiteCpp sqlite3 pthread dl)
+target_link_libraries(firmware SQLiteCpp sqlite3 pthread dl GL14epos)
