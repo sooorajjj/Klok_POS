@@ -10,8 +10,8 @@ namespace SQLite
 namespace klok {
 	namespace pc {
 		class User {
-			std::string id,name,password;
 		public:
+			std::string id,name,password;
 			static int32_t FromDatabase(SQLite::Database & db,const char * id,User & outUser);
 			static int32_t CreateTable(SQLite::Database & db,bool dropIfExist);
 

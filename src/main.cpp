@@ -440,8 +440,9 @@ int main(int argc, const char* argv[])
 			klok::pc::User userObj;
 			if(klok::pc::User::FromDatabase(getDatabase(),user,userObj) != 0){
 				printf("No Such User %s\n", user);
+				continue;
 			}
-			if(strcmp(user,"0123")==0)
+			if(userObj.id == user)
 			{
 				while(1)
 				{
@@ -453,16 +454,25 @@ int main(int argc, const char* argv[])
 					{
 						pwd[res]='\0';
 						printf("Password is %s %d\n",pwd,res);
-						if(strcmp(pwd,"0123")==0)
+						if(userObj.password == pwd )
 						{
 							gUserName = user;
 							main_menu(user,pwd);
 							printf("main_menu\n");
 						}
+						else
+						{
+							goto AGAIN_ASK_USER_DETAILS;
+						}
 					}
 				}
 			}
+
+
 		}
+AGAIN_ASK_USER_DETAILS:
+		while(false);
+
 	}
 
 LOGIN_SUCCESS:
