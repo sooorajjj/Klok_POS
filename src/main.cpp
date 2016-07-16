@@ -13,17 +13,209 @@ extern "C"{
 	#include <header.h>
 	#include<printer.h>
 }
+void PayCollection(){
+	printf("PayCollection Activity\n");
+}
+
+void POS(){
+	printf("POS Activity\n");
+}
+
 void Billing(){
 	printf("Billing\n");
+
+	MENU_T menu;
+    int opt=0;
+    int selItem  = 0;
+    int acceptKbdEvents=0;
+
+	while(1)
+	{
+		lk_dispclr();
+        menu.start                      = 0;
+        menu.maxEntries                 = 3;
+		strcpy(menu.menu[0],"Pay Collection");
+		strcpy(menu.menu[1],"POS");
+
+		while(1)
+		{
+		    lk_dispclr();
+		    opt = scroll_menu(&menu,&selItem,acceptKbdEvents);
+		    	switch(opt)
+		    	{
+					case CANCEL:
+					return;
+		          
+		           	case ENTER:
+
+		        		switch (selItem+1)
+		        		{
+		           		        case 1: PayCollection();
+		           		        break;
+		                		case 2: POS();
+		                		break;
+		        		}
+		    			break;
+		    	}
+        }
+	}
+
+
 }
+
+void DailyCollectionReport(){
+	printf("DailyCollectionReport Activity\n");
+}
+
+void ConsolidatedReport(){
+	printf("ConsolidatedReport Activity\n");
+}
+
+void CustomerWiseReport(){
+	printf("CustomerWiseReport Activity\n");
+}
+
 void Reports(){
 	printf("Reports\n");
+
+	MENU_T menu;
+    int opt=0;
+    int selItem  = 0;
+    int acceptKbdEvents=0;
+
+	while(1)
+	{
+		lk_dispclr();
+        menu.start                      = 0;
+        menu.maxEntries                 = 3;
+		strcpy(menu.menu[0],"Daily Collection Report");
+ 		strcpy(menu.menu[1],"Consolidated Report");
+		strcpy(menu.menu[2],"Customer Wise Report");
+
+		while(1)
+		{
+		    lk_dispclr();
+		    opt = scroll_menu(&menu,&selItem,acceptKbdEvents);
+		    	switch(opt)
+		    	{
+					case CANCEL:
+					return;
+		          
+		           	case ENTER:
+
+		        		switch (selItem+1)
+		        		{
+		           		        case 1: DailyCollectionReport();
+		           		        break;
+		                		case 2: ConsolidatedReport();
+		                		break;
+		                		case 3: CustomerWiseReport();
+		                		break;
+		        		}
+		    			break;
+		    	}
+        }
+	}
+}
+void Customer(){
+	printf("Customer Activity\n");
+}
+void Item(){
+	printf("Item Activity\n");
 }
 void Master(){
 	printf("Master\n");
+
+	MENU_T menu;
+    int opt=0;
+    int selItem  = 0;
+    int acceptKbdEvents=0;
+
+	while(1)
+	{
+		lk_dispclr();
+        menu.start                      = 0;
+        menu.maxEntries                 = 2;
+		strcpy(menu.menu[0],"Customer");
+		strcpy(menu.menu[1],"Item");
+
+		while(1)
+		{
+		    lk_dispclr();
+		    opt = scroll_menu(&menu,&selItem,acceptKbdEvents);
+		    	switch(opt)
+		    	{
+					case CANCEL:
+					return;
+		          
+		           	case ENTER:
+
+		        		switch (selItem+1)
+		        		{
+		           		        case 1: Customer();
+		           		        break;
+		                		case 2: Item();
+		                		break;
+		        		}
+		    			break;
+		    	}
+        }
+	}
 }
+
+void UserRights(){
+	printf("UserRights Activity\n");
+}
+
+void Download(){
+	printf("Download Activity\n");
+}
+
+void Upload(){
+	printf("Upload Activity\n");
+}
+
 void Settings(){
 	printf("Settings\n");
+
+	MENU_T menu;
+    int opt=0;
+    int selItem  = 0;
+    int acceptKbdEvents=0;
+
+	while(1)
+	{
+		lk_dispclr();
+        menu.start                      = 0;
+        menu.maxEntries                 = 2;
+		strcpy(menu.menu[0],"User Rights" );
+		strcpy(menu.menu[1],"Download");
+		strcpy(menu.menu[2],"Upload");
+
+		while(1)
+		{
+		    lk_dispclr();
+		    opt = scroll_menu(&menu,&selItem,acceptKbdEvents);
+		    	switch(opt)
+		    	{
+					case CANCEL:
+					return;
+		          
+		           	case ENTER:
+
+		        		switch (selItem+1)
+		        		{
+		           		        case 1: UserRights();
+		           		        break;
+		                		case 2: Download();
+		                		break;
+		                		case 3: Upload();
+		                		break;
+		        		}
+		    			break;
+		    	}
+        }
+	}
 }
 void main_menu(const char* user, const char* pwd)
 {
@@ -43,28 +235,28 @@ void main_menu(const char* user, const char* pwd)
     	strcpy(menu.menu[3],"Settings");
 			while(1)
 			{
-          
-        	lk_dispclr();
-            opt = scroll_menu(&menu,&selItem,acceptKbdEvents);
-            	switch(opt){
-					case CANCEL:
-					break;
-                  
-                   	case ENTER:
+	        	lk_dispclr();
+	            opt = scroll_menu(&menu,&selItem,acceptKbdEvents);
+	            	switch(opt)
+	            	{
+						case CANCEL:
+						break;
+	                  
+	                   	case ENTER:
 
-                		switch (selItem+1)
-                		{
-                   		        case 1: Billing();
-                   		        break;
-                        		case 2: Reports();
-                        		break;
-                        		case 3: Master();
-                        		break;
-                        		case 4:	Settings();
-                        		break;
-                		}
-            			break;
-            	}
+	                		switch (selItem+1)
+	                		{
+	                   		        case 1: Billing();
+	                   		        break;
+	                        		case 2: Reports();
+	                        		break;
+	                        		case 3: Master();
+	                        		break;
+	                        		case 4:	Settings();
+	                        		break;
+	                		}
+	            			break;
+            		}
         	}
 	}
 }
@@ -145,6 +337,7 @@ int main(int argc, const char* argv[])
 						if(strcmp(pwd,"0123")==0)
 						{
 							main_menu(user,pwd);
+							printf("main_menu\n");
 						}
 					}
 				}
