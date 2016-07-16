@@ -1,9 +1,9 @@
 #include <iostream>
-#include <string>
 #include <stdio.h>
 #include <stdlib.h>
 #include <SQLiteCpp/SQLiteCpp.h> 
 
+#include "PosDataStructures.hpp"
 #include "Visiontek.hpp"
 
 extern "C"{
@@ -17,6 +17,10 @@ extern "C"{
 namespace {
 	std::string gUserName = "",gTransId="";
 }
+
+
+
+
 void PayCollection()
 {
 	printf("PayCollection Activity\n");
@@ -317,8 +321,64 @@ void main_menu(const char* user, const char* pwd)
 	}
 }
 
+namespace {
+	SQLite::Database * gDatabasePtr = NULL;
+}
+
+void prompt_shutdown(){
+	lcd::DisplayText(3,0,"press power to shutdown",1);
+	while(true);
+}
+
+
+void display_fatal_error(const char * userError,std::exception & exc){
+	// call DisplayText 
+	lk_dispclr();
+	lcd::DisplayText(1,0,userError,1);
+
+	// Display exc.what()
+	std::string err = exc.what();
+	lcd::DisplayText(2,0,err.c_str(),1);
+}
+
+static SQLite::Database & getDatabase(){
+	if(gDatabasePtr == NULL){
+		try
+		{
+			gDatabasePtr = new SQLite::Database("PayCollect.db");
+		}
+		catch(std::exception & e)
+		{
+	
+			display_fatal_error("Database Open Failed",e);
+			prompt_shutdown();
+		}
+	}
+	else
+	{
+		return *gDatabasePtr;
+	}
+}
+
+
+static void closeDatabase(){
+
+	if(gDatabasePtr != NULL)
+	{
+		delete gDatabasePtr;
+		gDatabasePtr = NULL;
+	}
+
+}
+
+
+void checkDatabaseFile(){
+
+}
+
 int main(int argc, const char* argv[])
 {
+
 
 	char autobuf[80]={0};
 
@@ -335,6 +395,9 @@ int main(int argc, const char* argv[])
 	lk_dispclr();
 	lk_dispfont(&(X6x8_bits[0]),6);
 	lk_lcdintensity(24);
+
+
+	SQLite::Database & db = getDatabase();
 	
 	lcd::DisplayText(0,0,"Klok Innovations",1);
 	lcd::DisplayText(4,0,"  F1   F2   F3   F4",0);   
@@ -374,6 +437,10 @@ int main(int argc, const char* argv[])
 			user[res]='\0';
 
 			printf("Username is %s %d\n",user,res);
+			klok::pc::User userObj;
+			if(klok::pc::User::FromDatabase(getDatabase(),user,userObj) != 0){
+				printf("No Such User %s\n", user);
+			}
 			if(strcmp(user,"0123")==0)
 			{
 				while(1)
