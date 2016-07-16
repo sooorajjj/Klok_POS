@@ -13,8 +13,64 @@ extern "C"{
 	#include <header.h>
 	#include<printer.h>
 }
-void PayCollection(){
+
+namespace {
+	std::string gUserName = "",gTransId="";
+}
+void PayCollection()
+{
 	printf("PayCollection Activity\n");
+	lk_dispclr();                             
+
+	prn_open();
+
+	lk_bkl_timeout(20);
+	lk_dispclr();
+	lcd::DisplayText(1,0,"1.PayCollection Menu ",0);
+	lcd::DisplayText(4,0,"Press any key",0);
+	lk_getkey();
+
+	while(1)
+	{
+		std::string Trans_ID;
+		try
+			{
+		    // Open a database file
+		    SQLite::Database    db("PayCollect.db");
+
+		    // Compile a SQL query, containing one parameter (index 1)
+		    SQLite::Statement   query(db, "SELECT max(Trans_ID)+1 FROM pay_coll_trans where User_ID=?");
+		    query.bind(1,gUserName);
+
+		    // Bind the integer value 6 to the first parameter of the SQL query
+		    // Loop to execute the query step by step, to get rows of result
+			    while (query.executeStep())
+			    {
+			        // Demonstrate how to get some typed column value
+			        Trans_ID      = query.getColumn(0).getString();
+			        std::cout << "Trans No. : " << Trans_ID << ", " << std::endl;
+			    }
+			}
+			catch (std::exception& e)
+			{
+		    std::cout << "exception: " << e.what() << std::endl;
+			}
+
+		int res=0;
+		lk_dispclr();
+		std::string display_transid = "Trans_ID";
+		display_transid+=Trans_ID;
+		lcd::DisplayText(2,0,display_transid.c_str(),0);
+		printf("Trans_ID:%s\n",Trans_ID.c_str());
+		
+		while(1)
+		{
+
+		}
+
+
+		return;
+	}
 }
 
 void POS(){
@@ -295,13 +351,9 @@ int main(int argc, const char* argv[])
 	}
 
 		
-	lk_dispclr();
+	lk_dispclr();                                 
+	strcpy(menu.title,"Login");
 
-        menu.start                      = 0;
-        menu.maxEntries                 = 20;
-	                                                                              
-	strcpy(menu.title,"Login");       
-	    
 	int res=0;
 	prn_open();
 
@@ -336,6 +388,7 @@ int main(int argc, const char* argv[])
 						printf("Password is %s %d\n",pwd,res);
 						if(strcmp(pwd,"0123")==0)
 						{
+							gUserName = user;
 							main_menu(user,pwd);
 							printf("main_menu\n");
 						}
@@ -375,22 +428,4 @@ LOGIN_SUCCESS:
 	// {
  //    std::cout << "exception: " << e.what() << std::endl;
 	// }
-
-// 			lk_dispclr();
-//     	strcpy(menu.menu[1],"Billing");
-//     		strcpy(menu.menu[2],"Pay Collection");
-//     		strcpy(menu.menu[3],"POS");
-//     	strcpy(menu.menu[4],"Reports");
-//     		strcpy(menu.menu[5],"Daily Collection Report");
-//     		strcpy(menu.menu[6],"Consolidated Report");
-//     		strcpy(menu.menu[7],"Customer Wise Report");
-// 		strcpy(menu.menu[8],"Master");
-//     		strcpy(menu.menu[9],"Customer");
-// 			strcpy(menu.menu[10],"Item");
-//     	strcpy(menu.menu[11],"Settings");
-//     		strcpy(menu.menu[12],"User Rights" );
-// 			strcpy(menu.menu[13],"Download");
-// 			strcpy(menu.menu[14],"Upload");
-// }
-
 
