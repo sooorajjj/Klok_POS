@@ -14,12 +14,11 @@ namespace klok {
 
 			int32_t User::FromDatabase(SQLite::Database & db,const char * id,User & outUser){
 
-				const std::string queryString = "SELECT * FROM ? WHERE User_ID=?";
+				const std::string queryString = "SELECT * FROM pay_coll_user WHERE User_ID=?";
 				try
 				{
 					SQLite::Statement query(db,User::Queries::SELECT_USER_WITH_ID_FROM_TABLE);
-					query.bind(1,User::Queries::TABLE_NAME);
-					query.bind(2,id);
+					query.bind(1,id);
 
 					if(query.executeStep())
 					{
