@@ -16,8 +16,56 @@ extern "C"{
 
 namespace {
 	std::string gUserName = "",gTransId="";
+	SQLite::Database * gDatabasePtr = NULL;
 }
 
+void prompt_shutdown(){
+	lcd::DisplayText(3,0,"press power to shutdown",1);
+	while(true);
+}
+
+
+void display_fatal_error(const char * userError,std::exception & exc){
+	// call DisplayText 
+	lk_dispclr();
+	lcd::DisplayText(1,0,userError,1);
+
+	// Display exc.what()
+	std::string err = exc.what();
+	lcd::DisplayText(2,0,err.c_str(),1);
+}
+
+
+
+static void closeDatabase(){
+
+	if(gDatabasePtr != NULL)
+	{
+		delete gDatabasePtr;
+		gDatabasePtr = NULL;
+	}
+
+}
+
+
+static SQLite::Database & getDatabase(){
+	if(gDatabasePtr == NULL){
+		try
+		{
+			gDatabasePtr = new SQLite::Database("PayCollect.db");
+		}
+		catch(std::exception & e)
+		{
+	
+			display_fatal_error("Database Open Failed",e);
+			prompt_shutdown();
+		}
+	}
+	else
+	{
+		return *gDatabasePtr;
+	}
+}
 
 
 
@@ -26,7 +74,6 @@ void PayCollection()
 	printf("PayCollection Activity\n");
 	lk_dispclr();                             
 
-	prn_open();
 
 	lk_bkl_timeout(20);
 	lk_dispclr();
@@ -34,32 +81,16 @@ void PayCollection()
 	lcd::DisplayText(4,0,"Press any key",0);
 	lk_getkey();
 
+	std::string Trans_ID = "";
+	if(klok::pc::User::GetNextTransactionIDForUser(getDatabase(),gUserName.c_str(),Trans_ID) !=0 )
+	{
+		printf("Getting Trans_ID for user %s failed \n",gUserName.c_str());
+		return;
+	}
+
 	while(1)
 	{
-		std::string Trans_ID;
-		try
-			{
-		    // Open a database file
-		    SQLite::Database    db("PayCollect.db");
-
-		    // Compile a SQL query, containing one parameter (index 1)
-		    SQLite::Statement   query(db, "SELECT max(Trans_ID)+1 FROM pay_coll_trans where User_ID=?");
-		    query.bind(1,gUserName);
-
-		    // Bind the integer value 6 to the first parameter of the SQL query
-		    // Loop to execute the query step by step, to get rows of result
-			    while (query.executeStep())
-			    {
-			        // Demonstrate how to get some typed column value
-			        Trans_ID      = query.getColumn(0).getString();
-			        std::cout << "Trans No. : " << Trans_ID << ", " << std::endl;
-			    }
-			}
-			catch (std::exception& e)
-			{
-		    std::cout << "exception: " << e.what() << std::endl;
-			}
-
+		
 		int res=0;
 		lk_dispclr();
 		std::string display_transid = "Trans_ID";
@@ -283,6 +314,7 @@ void main_menu(const char* user, const char* pwd)
     int opt=0;
     int selItem  = 0;
     int acceptKbdEvents=0;
+	prn_open();
 
 	while(1)
 	{
@@ -321,55 +353,7 @@ void main_menu(const char* user, const char* pwd)
 	}
 }
 
-namespace {
-	SQLite::Database * gDatabasePtr = NULL;
-}
 
-void prompt_shutdown(){
-	lcd::DisplayText(3,0,"press power to shutdown",1);
-	while(true);
-}
-
-
-void display_fatal_error(const char * userError,std::exception & exc){
-	// call DisplayText 
-	lk_dispclr();
-	lcd::DisplayText(1,0,userError,1);
-
-	// Display exc.what()
-	std::string err = exc.what();
-	lcd::DisplayText(2,0,err.c_str(),1);
-}
-
-static SQLite::Database & getDatabase(){
-	if(gDatabasePtr == NULL){
-		try
-		{
-			gDatabasePtr = new SQLite::Database("PayCollect.db");
-		}
-		catch(std::exception & e)
-		{
-	
-			display_fatal_error("Database Open Failed",e);
-			prompt_shutdown();
-		}
-	}
-	else
-	{
-		return *gDatabasePtr;
-	}
-}
-
-
-static void closeDatabase(){
-
-	if(gDatabasePtr != NULL)
-	{
-		delete gDatabasePtr;
-		gDatabasePtr = NULL;
-	}
-
-}
 
 
 void checkDatabaseFile(){
@@ -392,6 +376,7 @@ int main(int argc, const char* argv[])
 
 	lk_open();
 	mscr_open();
+	prn_open();
 	lk_dispclr();
 	lk_dispfont(&(X6x8_bits[0]),6);
 	lk_lcdintensity(24);
@@ -418,7 +403,6 @@ int main(int argc, const char* argv[])
 	strcpy(menu.title,"Login");
 
 	int res=0;
-	prn_open();
 
 	lk_bkl_timeout(20);
 	lk_dispclr();

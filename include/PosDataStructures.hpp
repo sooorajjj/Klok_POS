@@ -14,12 +14,13 @@ namespace klok {
 			std::string id,name,password;
 			static int32_t FromDatabase(SQLite::Database & db,const char * id,User & outUser);
 			static int32_t CreateTable(SQLite::Database & db,bool dropIfExist);
-
+			static int32_t GetNextTransactionIDForUser(SQLite::Database & db,const char * id,std::string & outID);
 			struct Queries {
 				static const char * TABLE_NAME;
 				static const char * CREATE_USER_TABLE_QUERY;
 				static const char * DROP_USER_TABLE_QUERY;
 				static const char * SELECT_USER_WITH_ID_FROM_TABLE;
+				static const char * GET_NEXT_TRANS_ID_FOR_USER;
 			};
 		};
 	}
