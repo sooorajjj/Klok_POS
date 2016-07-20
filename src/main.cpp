@@ -437,8 +437,8 @@ int main(int argc, const char* argv[])
 			user[res]='\0';
 
 			printf("Username is %s %d\n",user,res);
-			klok::pc::User userObj;
-			if(klok::pc::User::FromDatabase(getDatabase(),user,userObj) != 0){
+			sooraj::pc::User userObj;
+			if(sooraj::pc::User::FromDatabase(getDatabase(),user,userObj) != 0){
 				printf("No Such User %s\n", user);
 				continue;
 			}
