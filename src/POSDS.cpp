@@ -39,7 +39,6 @@ namespace klok {
 
 			int32_t User::FromDatabase(SQLite::Database & db,const char * id,User & outUser){
 
-				const std::string queryString = "SELECT * FROM pay_coll_user WHERE User_ID=?";
 				try
 				{
 					SQLite::Statement query(db,User::Queries::SELECT_USER_WITH_ID_FROM_TABLE);
@@ -67,10 +66,14 @@ namespace klok {
 			}
 
 			int32_t User::CreateTable(SQLite::Database & db,bool dropIfExist){
-				const std::string queryString = "SELECT * FROM pay_coll_user WHERE User_ID=?";
 				try
 				{
-					SQLite::Statement query(db,queryString);
+					if(dropIfExist){
+						SQLite::Statement query(db,User::Queries::DROP_USER_TABLE_QUERY);
+						query.executeStep();
+					}
+
+					SQLite::Statement query(db,User::Queries::CREATE_USER_TABLE_QUERY);
 					if(query.executeStep()) {
 						return 0;
 					}
@@ -88,11 +91,11 @@ namespace klok {
 			}
 			const char * User::Queries::GET_NEXT_TRANS_ID_FOR_USER = "select MAX(Trans_ID)+1 as Next_ID from pay_coll_trans where User_ID=?";
 			const char * User::Queries::TABLE_NAME = "pay_coll_user";
-			const char * User::Queries::SELECT_USER_WITH_ID_FROM_TABLE = "SELECT * FROM ? WHERE User_ID=?";
-			const char * User::Queries::CREATE_USER_TABLE_QUERY = 	"CREATE TABLE ? (" 
+			const char * User::Queries::SELECT_USER_WITH_ID_FROM_TABLE = "SELECT * FROM pay_coll_user WHERE User_ID=?";
+			const char * User::Queries::CREATE_USER_TABLE_QUERY = 	"CREATE TABLE pay_coll_user (" 
 																	"User_ID       INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT," 
 																	"User_Name 	 VARCHAR(20) NOT NULL UNIQUE," 
 																	"Password	  	 VARCHAR(8) NOT NULL );";
-			const char * User::Queries::DROP_USER_TABLE_QUERY = "DROP TABLE ? IF EXISTS;";
+			const char * User::Queries::DROP_USER_TABLE_QUERY = "DROP TABLE pay_coll_user IF EXISTS;";
 	}
 } 
