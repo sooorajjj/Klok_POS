@@ -87,6 +87,11 @@ void PayCollection()
 		printf("Getting Trans_ID for user %s failed \n",gUserName.c_str());
 		return;
 	}
+	else if (Trans_ID == "")
+	{
+		printf("User name  %s is not available\n",gUserName.c_str());
+		return;
+	}
 
 	while(1)
 	{
