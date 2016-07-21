@@ -5,6 +5,7 @@
 
 #include "PosDataStructures.hpp"
 #include "Visiontek.hpp"
+#include <vector>
 
 extern "C"{
 	#include<X6x8.h>
@@ -93,22 +94,41 @@ void PayCollection()
 		return;
 	}
 
+
+	std::vector<klok::pc::User> allUsers;
+	if(klok::pc::User::GetAllFromDatabase(getDatabase(),allUsers,10)== 0)
+		{
+		//got all users
+			for(int i = 0; i != allUsers.size(); i++)
+			{
+				printf("Userid%s\n",allUsers[i].id.c_str() );
+				printf("Username%s\n",allUsers[i].name.c_str() );
+			}			
+		}
+	else
+		{
+		printf("failed to GetAllFromDatabase \n");
+		// failed
+		}
+
 	while(1)
 	{
 		
 		int res=0;
 		lk_dispclr();
-		std::string display_transid = "Trans_ID";
+		std::string display_transid = "TransNo :";
 		display_transid+=Trans_ID;
 		lcd::DisplayText(2,0,display_transid.c_str(),0);
-		printf("Trans_ID:%s\n",Trans_ID.c_str());
+		printf("Trans_ID :%s\n",Trans_ID.c_str());
+
+		lcd::DisplayText(4,0,"Press any key",0);
+		lk_getkey();
+		lk_dispclr();
 		
 		while(1)
 		{
-
+		
 		}
-
-
 		return;
 	}
 }
