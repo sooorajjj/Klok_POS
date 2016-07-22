@@ -2,4 +2,5 @@
 *.exe
 *.a
 build
+build.sh
 lib/SQLiteCpp/build

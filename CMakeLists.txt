@@ -3,12 +3,16 @@ cmake_minimum_required(VERSION 2.8)
 cmake_policy(SET CMP0015 NEW)
 project(KlokPOS)
 
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=armv5te -mtune=arm926ej-s -msoft-float -mfloat-abi=soft")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv5te -mtune=arm926ej-s -msoft-float -mfloat-abi=soft")
+
 include_directories(
   "lib/visiontek/inc"
   "lib/SQLiteCpp/include"
   "include")
 if(NOT DEFINED ENV{VISIONTEK_CC})
     message(FATAL_ERROR "VISIONTEK_CC environment variable not defined")
+
 else()
 	message(STATUS "VISIONTEK_CC:" $ENV{VISIONTEK_CC})
 endif()
@@ -31,6 +35,7 @@ add_subdirectory("lib/visiontek")
 
 set(CMAKE_C_COMPILER $ENV{VISIONTEK_CC})
 set(CMAKE_CXX_COMPILER $ENV{VISIONTEK_CXX})
+
 # set(CMAKE_C_COMPILER "/home/klok/GL14-SDK/TOOL_CHAIN/gcc-4.1.2-glibc-2.5-nptl-3/arm-none-linux-gnueabi/bin//arm-none-linux-gnueabi-gcc")
 # set(CMAKE_CXX_COMPILER "/home/klok/GL14-SDK/TOOL_CHAIN/gcc-4.1.2-glibc-2.5-nptl-3/arm-none-linux-gnueabi/bin//arm-none-linux-gnueabi-g++")
 

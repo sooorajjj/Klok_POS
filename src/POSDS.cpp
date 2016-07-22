@@ -1,6 +1,7 @@
 #include "PosDataStructures.hpp"
 #include <SQLiteCpp/SQLiteCpp.h>
 
+#include <cstdio>
 #include <vector>
 
 namespace klok {

@@ -1,3 +1,6 @@
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=armv5te -mtune=arm926ej-s -msoft-float -mfloat-abi=soft")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv5te -mtune=arm926ej-s -msoft-float -mfloat-abi=soft")
+
 if(NOT DEFINED ENV{VISIONTEK_CC})
     message(FATAL_ERROR "VISIONTEK_CC environment variable not defined")
 else()

@@ -68,7 +68,34 @@ static SQLite::Database & getDatabase(){
 	}
 }
 
+const char * getPosCustomerDisplayName(const klok::pc::Customer & inCustomer)
+{
+	return inCustomer.id.c_str();
+}
 
+
+void display_customer_details(const klok::pc::Customer & inCustomer){
+	lk_dispclr();
+	std::string Cust_Name = "Customer name:" + inCustomer.name;
+	lcd::DisplayText(1,0,Cust_Name.c_str(),0);
+	printf("%s\n",Cust_Name.c_str());
+	std::string Cust_Bal = "Balance Amt :" + inCustomer.cur_amt;
+	lcd::DisplayText(2,0,Cust_Bal.c_str(),0);
+	printf("%s\n",Cust_Bal.c_str());
+	lcd::DisplayText(4,0,"Press Enter once details have been confirmed",0);
+
+	int x = lk_getkey();
+	lk_dispclr();
+	if(x == klok::pc::KEYS::KEY_ENTER){
+		int res = 0;
+		char grossAmt[10]={0};
+		lcd::DisplayText(1,0,"Gross Amount",0);
+		res=lk_getnumeric(4,0,(unsigned char *)grossAmt,10,strlen(grossAmt));
+	}
+	else if(x == klok::pc::KEYS::KEY_CANCEL){
+
+	}
+}
 
 void PayCollection()
 {
@@ -95,15 +122,24 @@ void PayCollection()
 	}
 
 
-	std::vector<klok::pc::User> allUsers;
-	if(klok::pc::User::GetAllFromDatabase(getDatabase(),allUsers,10)== 0)
+	std::vector<klok::pc::Customer> allCustomers;
+	if(klok::pc::Customer::GetAllFromDatabase(getDatabase(),allCustomers,10)== 0)
 		{
 		//got all users
-			for(int i = 0; i != allUsers.size(); i++)
+
+
+			for(int i = 0; i != allCustomers.size(); i++)
 			{
-				printf("Userid%s\n",allUsers[i].id.c_str() );
-				printf("Username%s\n",allUsers[i].name.c_str() );
-			}			
+				printf("Userid :%s\n",allCustomers[i].id.c_str() );
+				printf("Username :%s\n",allCustomers[i].name.c_str() );
+			}	
+
+			klok::pc::MenuResult res;
+			res.wasCancelled = false;
+			res.selectedIndex = -1;
+			klok::pc::display_sub_range(allCustomers,4,res,&getPosCustomerDisplayName);
+			if(!res.wasCancelled)
+				display_customer_details(allCustomers[res.selectedIndex]);
 		}
 	else
 		{
