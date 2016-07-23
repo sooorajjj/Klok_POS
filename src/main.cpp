@@ -131,11 +131,12 @@ void insertAndPrint(float principleAmt, float addLess, float netAmt, std::string
     memset(buff3,0,100);
     memset(buff4,0,100);
     lk_dispclr();
-	lcd::DisplayText(3,5,"Continue printing",1);
+	lcd::DisplayText(1,0,"Continue printing",1);
     lcd::DisplayText(4,0,"Press Enter ",0);
 	int x = lk_getkey();
 		if(x == klok::pc::KEYS::KEY_ENTER)
 		{
+			prn_open();
 	    	if(prn_paperstatus()!=0)
 	    	{
 			lk_dispclr();
@@ -183,6 +184,7 @@ void insertAndPrint(float principleAmt, float addLess, float netAmt, std::string
 		    ret=printer::WriteText("\n\n\n",3,1);
 		    returncheck(ret);
 		    ret=prn_paper_feed(2);
+		    prn_close();
 
 		    if(ret==-3)
 		    {
