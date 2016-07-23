@@ -73,6 +73,44 @@ const char * getPosCustomerDisplayName(const klok::pc::Customer & inCustomer)
 	return inCustomer.id.c_str();
 }
 
+int returncheck(int r)
+{
+	switch(r)
+	{
+	case -1: lk_dispclr();
+		lcd::DisplayText(2,5,"device not opened",1);
+		break;
+
+	case -2: lk_dispclr();
+		lcd::DisplayText(2,5,"length error",1);
+		break;
+
+	case -3: lk_dispclr();
+	    lcd::DisplayText(2,5,"NO Paper",1);
+	    break;
+
+	case -4: lk_dispclr();
+	    lcd::DisplayText(2,5,"Low Battery",1);
+	    break;
+
+	case -5: lk_dispclr();
+	    lcd::DisplayText(2,5,"Max temp",1);
+	    break;
+
+	case -6: lk_dispclr();
+	    lcd::DisplayText(2,5,"No Lines",1);
+	     break;
+	case -7: lk_dispclr();
+	    lcd::DisplayText(2,5,"WRITE_ERROR",1);
+	    break;
+		
+	case 0: return 0;
+
+	default: return 0;
+	}
+return 0;
+}
+
 void insertAndPrint(float principleAmt, float addLess, float netAmt, std::string principleAmtString, std::string addLessString, std::string netAmtString, std::string customerId, std::string userId, std::string transId){
 
 	klok::pc::Transaction toInsert;
@@ -84,67 +122,78 @@ void insertAndPrint(float principleAmt, float addLess, float netAmt, std::string
 	// toInsert.date_time = 
 	if(klok::pc::Transaction::InsertIntoTable(getDatabase(),toInsert)==0)
 	{
-		int status = 0;
-		lk_dispclr();
-		lcd::DisplayText(1,0,"Continue printing",0);
-		int x = lk_getkey();
+	
+	char buff[200],buff1[100],buff2[200],buff3[100],buff4[100];
+ 	int ret;
+    memset(buff,0,200);
+    memset(buff1,0,100);
+    memset(buff2,0,200);
+    memset(buff3,0,100);
+    memset(buff4,0,100);
+    lk_dispclr();
+	lcd::DisplayText(3,5,"Continue printing",1);
+    lcd::DisplayText(4,0,"Press Enter ",0);
+	int x = lk_getkey();
 		if(x == klok::pc::KEYS::KEY_ENTER)
 		{
-			if(prn_open()!=-1)
-			{
-				if(prn_paperstatus()!=0)
-	        	{
-	                lk_dispclr();
-	                lcd::DisplayText(3,5,"No Paper !",1);
-	                lk_getkey();
+	    	if(prn_paperstatus()!=0)
+	    	{
+			lk_dispclr();
+	        lcd::DisplayText(3,5,"No Paper !",1);
+	        lk_getkey();
+	        return;
+	    	}
+	        strcat(buff,"            Klok Innovations\n\n");
+	    	strcat(buff,"      BLAH.. BLAH... BLAH....\n");
+	    	strcat(buff,"      mORE bLAH... BLAH. Blah.\n");
+	    	strcat(buff,"      soME moRE bLAH..........\n");
+	    	strcat(buff1,"     CASH BILL\n");
+	    	strcat(buff2,"     Bill No       ");
+	    	strcat(buff2,transId.c_str());
+	    	strcat(buff2,"\n");
+	    	strcat(buff2,"     Name           customer1\n");
+	    	strcat(buff2,"     Contact         contact1\n");
+	    	strcat(buff2,"     Gross Amount         500.10\n");
+	    	strcat(buff2,"     Add/Less             500.10\n");
+	    	strcat(buff2,"     ---------------------------\n");
+	    	strcat(buff3,"  CASH    1000.20\n");
+	    	strcat(buff4,"     Balance            ");
+	    	strcat(buff4,principleAmtString.c_str());
+	    	strcat(buff4,"\n");
+	    	strcat(buff4,"     Billing Username  ");
+	    	strcat(buff4,userId.c_str());
+	    	strcat(buff4,"\n");
+	    	strcat(buff4,"       THANK YOU VISIT AGAIN\n");
+	    	strcat(buff4,"       C 1 17:10:47  M/C\n");
 
-	                return;
-	        	}
-	    		status=printer::WriteText("\n",1,1);
-	    		if(status != 0)
-	    		{
-	    			lk_dispclr();
-	    			lcd::DisplayText(1,0,"Printing Error",0);
-	    			lk_getkey();
-	    			return;
-	    		}
-	    		status=printer::WriteText("Klok Innovations",16,1);
-	    		if(status != 0)
-	    		{
-	    			lk_dispclr();
-	    			lcd::DisplayText(1,0,"Printing Error",0);
-	    			lk_getkey();
-	    			return;
-	    		}
-	    		status=printer::WriteText("1234567890",1,1);
-	    		if(status != 0)
-	    		{
-	    			lk_dispclr();
-	    			lcd::DisplayText(1,0,"Printing Error",0);
-	    			lk_getkey();
-	    			return;
-	    		}
-	    		status=printer::WriteText(customerId.c_str(),1,1);
-	    		if(status != 0)
-	    		{
-	    			lk_dispclr();
-	    			lcd::DisplayText(1,0,"Printing Error",0);
-	    			lk_getkey();
-	    			return;
-	    		}
-	    		status=printer::WriteText(userId.c_str(),1,1);
-	    		if(status != 0)
-	    		{
-	    			lk_dispclr();
-	    			lcd::DisplayText(1,0,"Printing Error",0);
-	    			lk_getkey();
-	    			return;
-	    		}
-			}
-		}else
-			{
+	    	lk_dispclr();
+	        lcd::DisplayText(3,5,"PRINTING BILL 1",1);
 
-			}
+	        ret=printer::WriteText(buff,strlen(buff),1);
+		    returncheck(ret);
+		    prn_paper_feed(1);
+		    ret=printer::WriteText(buff1,strlen(buff1),2);
+		    returncheck(ret);
+		    ret=printer::WriteText(buff2,strlen(buff2),1);
+		    returncheck(ret);
+		    ret=printer::WriteText(buff3,strlen(buff3),2);
+		    returncheck(ret);
+		    ret=printer::WriteText(buff4,strlen(buff4),1);
+		    returncheck(ret);
+		    ret=printer::WriteText("\n\n\n",3,1);
+		    returncheck(ret);
+		    ret=prn_paper_feed(2);
+
+		    if(ret==-3)
+		    {
+	 	        printf("out of the paper");
+		    }else
+		         
+	        return;
+	    }else if(x == klok::pc::KEYS::KEY_CANCEL){
+		
+		return;
+	    }
 	}else{
 		printf("failed to InsertIntoTable\n");
 	}
