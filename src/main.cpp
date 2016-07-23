@@ -16,7 +16,7 @@ extern "C"{
 }
 
 namespace {
-	std::string gUserName = "",gTransId="";
+	std::string gUserId = "",gTransId="", gCustomerId="";
 	SQLite::Database * gDatabasePtr = NULL;
 }
 
@@ -53,7 +53,7 @@ static SQLite::Database & getDatabase(){
 	if(gDatabasePtr == NULL){
 		try
 		{
-			gDatabasePtr = new SQLite::Database("PayCollect.db");
+			gDatabasePtr = new SQLite::Database("PayCollect.db", SQLite::OPEN_READWRITE, SQLite::OPEN_CREATE);
 		}
 		catch(std::exception & e)
 		{
@@ -73,13 +73,133 @@ const char * getPosCustomerDisplayName(const klok::pc::Customer & inCustomer)
 	return inCustomer.id.c_str();
 }
 
+void insertAndPrint(float principleAmt, float addLess, float netAmt, std::string principleAmtString, std::string addLessString, std::string netAmtString, std::string customerId, std::string userId, std::string transId){
+
+	klok::pc::Transaction toInsert;
+	toInsert.cust_id = customerId;
+	toInsert.user_id = userId;
+	toInsert.gross_amt = principleAmtString;
+	toInsert.add_less = addLessString;
+	toInsert.net_amt = netAmtString;
+	// toInsert.date_time = 
+	if(klok::pc::Transaction::InsertIntoTable(getDatabase(),toInsert)==0)
+	{
+		int status = 0;
+		lk_dispclr();
+		lcd::DisplayText(1,0,"Continue printing",0);
+		int x = lk_getkey();
+		if(x == klok::pc::KEYS::KEY_ENTER)
+		{
+			if(prn_open()!=-1)
+			{
+				if(prn_paperstatus()!=0)
+	        	{
+	                lk_dispclr();
+	                lcd::DisplayText(3,5,"No Paper !",1);
+	                lk_getkey();
+
+	                return;
+	        	}
+	    		status=printer::WriteText("\n",1,1);
+	    		if(status != 0)
+	    		{
+	    			lk_dispclr();
+	    			lcd::DisplayText(1,0,"Printing Error",0);
+	    			lk_getkey();
+	    			return;
+	    		}
+	    		status=printer::WriteText("Klok Innovations",16,1);
+	    		if(status != 0)
+	    		{
+	    			lk_dispclr();
+	    			lcd::DisplayText(1,0,"Printing Error",0);
+	    			lk_getkey();
+	    			return;
+	    		}
+	    		status=printer::WriteText("1234567890",1,1);
+	    		if(status != 0)
+	    		{
+	    			lk_dispclr();
+	    			lcd::DisplayText(1,0,"Printing Error",0);
+	    			lk_getkey();
+	    			return;
+	    		}
+	    		status=printer::WriteText(customerId.c_str(),1,1);
+	    		if(status != 0)
+	    		{
+	    			lk_dispclr();
+	    			lcd::DisplayText(1,0,"Printing Error",0);
+	    			lk_getkey();
+	    			return;
+	    		}
+	    		status=printer::WriteText(userId.c_str(),1,1);
+	    		if(status != 0)
+	    		{
+	    			lk_dispclr();
+	    			lcd::DisplayText(1,0,"Printing Error",0);
+	    			lk_getkey();
+	    			return;
+	    		}
+			}
+		}else
+			{
+
+			}
+	}else{
+		printf("failed to InsertIntoTable\n");
+	}
+
+}
+void net_amt(float principleAmt,float addLess)
+{
+	lk_getkey();
+	lk_dispclr();
+	float netAmt = principleAmt + addLess;	
+	char principleAmtString [30]={0};
+	char addLessString [30]={0};
+	char netAmtString [30]={0};
+	sprintf(principleAmtString,"%f",principleAmt);
+	sprintf(addLessString,"%f",addLess);
+	sprintf(netAmtString,"%f",netAmt);
+	lcd::DisplayText(1,0,"Net Amount",0);
+	lcd::DisplayText(3,0,netAmtString,0);
+
+
+	
+	int x = lk_getkey();
+		if(x == klok::pc::KEYS::KEY_ENTER){
+			insertAndPrint(principleAmt,addLess,netAmt,principleAmtString,addLessString,netAmtString,gCustomerId,gUserId,gTransId);
+		}
+}
+
+void add_less(float principleAmt)
+{
+	int x = lk_getkey();
+	lk_dispclr();
+	if(x == klok::pc::KEYS::KEY_ENTER){
+		int res = 0;
+		char addLess[10]={0};
+		lcd::DisplayText(1,0,"Add/Less",0);
+		res=lk_getnumeric(4,0,(unsigned char *)addLess,10,strlen(addLess));
+		float scanned =0;
+		if (sscanf(addLess,"%f",&scanned)==1&&res>0)
+		{
+			net_amt(principleAmt,scanned);
+			lcd::DisplayText(4,0,"Press Enter once details have been confirmed",0);
+		}else{
+			lk_dispclr();
+			lcd::DisplayText(4,0,"Enter correct Amt",0);
+			lk_getkey();
+		}
+	}
+}
 
 void display_customer_details(const klok::pc::Customer & inCustomer){
 	lk_dispclr();
-	std::string Cust_Name = "Customer name:" + inCustomer.name;
+	std::string Cust_Name = "Name :" + inCustomer.name;
 	lcd::DisplayText(1,0,Cust_Name.c_str(),0);
 	printf("%s\n",Cust_Name.c_str());
-	std::string Cust_Bal = "Balance Amt :" + inCustomer.cur_amt;
+	std::string Cust_Bal = "Balance Amt:" + inCustomer.cur_amt;
 	lcd::DisplayText(2,0,Cust_Bal.c_str(),0);
 	printf("%s\n",Cust_Bal.c_str());
 	lcd::DisplayText(4,0,"Press Enter once details have been confirmed",0);
@@ -91,6 +211,16 @@ void display_customer_details(const klok::pc::Customer & inCustomer){
 		char grossAmt[10]={0};
 		lcd::DisplayText(1,0,"Gross Amount",0);
 		res=lk_getnumeric(4,0,(unsigned char *)grossAmt,10,strlen(grossAmt));
+		float scanned =0;
+		if (sscanf(grossAmt,"%f",&scanned)==1&&res>0)
+		{
+			add_less(scanned);
+			lcd::DisplayText(4,0,"Press Enter once details have been confirmed",0);
+		}else{
+			lk_dispclr();
+			lcd::DisplayText(4,0,"Enter correct Amt",0);
+			lk_getkey();
+		}
 	}
 	else if(x == klok::pc::KEYS::KEY_CANCEL){
 
@@ -110,17 +240,17 @@ void PayCollection()
 	lk_getkey();
 
 	std::string Trans_ID = "";
-	if(klok::pc::User::GetNextTransactionIDForUser(getDatabase(),gUserName.c_str(),Trans_ID) !=0 )
+	if(klok::pc::User::GetNextTransactionIDForUser(getDatabase(),gUserId.c_str(),Trans_ID) !=0 )
 	{
-		printf("Getting Trans_ID for user %s failed \n",gUserName.c_str());
+		printf("Getting Trans_ID for user %s failed \n",gUserId.c_str());
 		return;
 	}
 	else if (Trans_ID == "")
 	{
-		printf("User name  %s is not available\n",gUserName.c_str());
+		printf("User name  %s is not available\n",gUserId.c_str());
 		return;
 	}
-
+	gTransId = Trans_ID;
 
 	std::vector<klok::pc::Customer> allCustomers;
 	if(klok::pc::Customer::GetAllFromDatabase(getDatabase(),allCustomers,10)== 0)
@@ -139,7 +269,10 @@ void PayCollection()
 			res.selectedIndex = -1;
 			klok::pc::display_sub_range(allCustomers,4,res,&getPosCustomerDisplayName);
 			if(!res.wasCancelled)
+			{
+				gCustomerId = allCustomers[res.selectedIndex].id;
 				display_customer_details(allCustomers[res.selectedIndex]);
+			}
 		}
 	else
 		{
@@ -375,7 +508,6 @@ void main_menu(const char* user, const char* pwd)
     int opt=0;
     int selItem  = 0;
     int acceptKbdEvents=0;
-	prn_open();
 
 	while(1)
 	{
@@ -437,7 +569,6 @@ int main(int argc, const char* argv[])
 
 	lk_open();
 	mscr_open();
-	prn_open();
 	lk_dispclr();
 	lk_dispfont(&(X6x8_bits[0]),6);
 	lk_lcdintensity(24);
@@ -451,7 +582,7 @@ int main(int argc, const char* argv[])
 	lk_buzzer(2);
 
 	sprintf(autobuf,"%s-%02d%02d%02d%02d%02d%04d.txt",buff,intim.tm_hour,intim.tm_min,intim.tm_sec,intim.tm_mday,intim.tm_mon+1,intim.tm_year+1900);
-
+	printf("%s\n",autobuf );
 	while(1)
 	{	
 	int key1=lk_getkey();
@@ -501,7 +632,7 @@ int main(int argc, const char* argv[])
 						printf("Password is %s %d\n",pwd,res);
 						if(userObj.password == pwd )
 						{
-							gUserName = user;
+							gUserId = user;
 							main_menu(user,pwd);
 							printf("main_menu\n");
 						}

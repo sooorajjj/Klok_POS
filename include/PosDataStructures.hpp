@@ -51,6 +51,23 @@ namespace klok {
 				static const char * GET_NEXT_TRANS_ID_FOR_CUSTOMER;
 			};		
 		};
+		class Transaction
+		{
+		public:
+			std::string trans_id,cust_id,user_id,gross_amt,add_less,net_amt,date_time;
+			static int32_t FromDatabase(SQLite::Database & db,const char * id,Transaction & outTransaction);
+			static int32_t CreateTable(SQLite::Database & db,bool dropIfExist);
+			static int32_t GetAllFromDatabase(SQLite::Database & db,std::vector<Transaction> &outTransactions,uint32_t maxToRead);
+			static int32_t InsertIntoTable(SQLite::Database & db,const Transaction & toInsert);
+			struct Queries {
+				static const char * TABLE_NAME;
+				static const char * GET_ALL_QUERY;
+				static const char * INSERT_INTO_TABLE;
+				static const char * CREATE_TRANSACTION_TABLE_QUERY;
+				static const char * DROP_TRANSACTION_TABLE_QUERY;
+				static const char * SELECT_TRANSACTION_WITH_ID_FROM_TABLE;
+			};		
+		};
 		struct MenuResult
 			{
 			bool wasCancelled;
