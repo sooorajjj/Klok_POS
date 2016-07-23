@@ -185,7 +185,7 @@ void add_less(float principleAmt)
 		if (sscanf(addLess,"%f",&scanned)==1&&res>0)
 		{
 			net_amt(principleAmt,scanned);
-			lcd::DisplayText(4,0,"Press Enter once details have been confirmed",0);
+			lcd::DisplayText(4,0,"Press Enter once data have been confirmed",0);
 		}else{
 			lk_dispclr();
 			lcd::DisplayText(4,0,"Enter correct Amt",0);
@@ -202,7 +202,7 @@ void display_customer_details(const klok::pc::Customer & inCustomer){
 	std::string Cust_Bal = "Balance Amt:" + inCustomer.cur_amt;
 	lcd::DisplayText(2,0,Cust_Bal.c_str(),0);
 	printf("%s\n",Cust_Bal.c_str());
-	lcd::DisplayText(4,0,"Press Enter once details have been confirmed",0);
+	lcd::DisplayText(4,0,"Press Enter once data have been confirmed",0);
 
 	int x = lk_getkey();
 	lk_dispclr();
@@ -215,42 +215,19 @@ void display_customer_details(const klok::pc::Customer & inCustomer){
 		if (sscanf(grossAmt,"%f",&scanned)==1&&res>0)
 		{
 			add_less(scanned);
-			lcd::DisplayText(4,0,"Press Enter once details have been confirmed",0);
+			lcd::DisplayText(4,0,"Press Enter once data have been confirmed",0);
 		}else{
 			lk_dispclr();
 			lcd::DisplayText(4,0,"Enter correct Amt",0);
 			lk_getkey();
 		}
-	}
-	else if(x == klok::pc::KEYS::KEY_CANCEL){
-
+	}else if(x == klok::pc::KEYS::KEY_CANCEL){
+		printf("pressed cancel while display_customer_details\n");
+		
 	}
 }
 
-void PayCollection()
-{
-	printf("PayCollection Activity\n");
-	lk_dispclr();                             
-
-
-	lk_bkl_timeout(20);
-	lk_dispclr();
-	lcd::DisplayText(1,0,"1.PayCollection Menu ",0);
-	lcd::DisplayText(4,0,"Press any key",0);
-	lk_getkey();
-
-	std::string Trans_ID = "";
-	if(klok::pc::User::GetNextTransactionIDForUser(getDatabase(),gUserId.c_str(),Trans_ID) !=0 )
-	{
-		printf("Getting Trans_ID for user %s failed \n",gUserId.c_str());
-		return;
-	}
-	else if (Trans_ID == "")
-	{
-		printf("User name  %s is not available\n",gUserId.c_str());
-		return;
-	}
-	gTransId = Trans_ID;
+void getCustomerDetails(){
 
 	std::vector<klok::pc::Customer> allCustomers;
 	if(klok::pc::Customer::GetAllFromDatabase(getDatabase(),allCustomers,10)== 0)
@@ -273,32 +250,51 @@ void PayCollection()
 				gCustomerId = allCustomers[res.selectedIndex].id;
 				display_customer_details(allCustomers[res.selectedIndex]);
 			}
-		}
-	else
-		{
+		}else{
 		printf("failed to GetAllFromDatabase \n");
 		// failed
 		}
+}
 
-	while(1)
+void PayCollection()
+{
+	printf("PayCollection Activity\n");
+
+	lk_bkl_timeout(20);
+	lk_dispclr();
+	lcd::DisplayText(1,0,"1.PayCollection Menu ",0);
+	lcd::DisplayText(4,0,"Press any key",0);
+	lk_getkey();
+
+	std::string Trans_ID = "";
+	if(klok::pc::User::GetNextTransactionIDForUser(getDatabase(),gUserId.c_str(),Trans_ID) !=0 )
 	{
-		
-		int res=0;
-		lk_dispclr();
-		std::string display_transid = "TransNo :";
-		display_transid+=Trans_ID;
-		lcd::DisplayText(2,0,display_transid.c_str(),0);
-		printf("Trans_ID :%s\n",Trans_ID.c_str());
-
-		lcd::DisplayText(4,0,"Press any key",0);
-		lk_getkey();
-		lk_dispclr();
-		
-		while(1)
-		{
-		
-		}
+		printf("Getting Trans_ID for user %s failed \n",gUserId.c_str());
 		return;
+	}
+	else if (Trans_ID == "")
+	{
+		printf("User name  %s is not available\n",gUserId.c_str());
+		return;
+	}
+	gTransId = Trans_ID;
+
+		
+	lk_dispclr();
+	std::string display_transid = "TransNo :";
+	display_transid+=Trans_ID;
+	lcd::DisplayText(2,0,display_transid.c_str(),0);
+	printf("Trans_ID :%s\n",Trans_ID.c_str());
+
+	lcd::DisplayText(4,0,"Press Enter key to continue",0);
+	int x = lk_getkey();
+	lk_dispclr();
+	if(x == klok::pc::KEYS::KEY_ENTER)
+	{
+	getCustomerDetails();
+
+	}else if(x == klok::pc::KEYS::KEY_CANCEL){
+		printf("pressed cancel after TransNo screen\n");
 	}
 }
 
