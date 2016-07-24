@@ -16,7 +16,7 @@ extern "C"{
 }
 
 namespace {
-	std::string gUserId = "",gTransId="", gCustomerId="";
+	std::string gUserId ="",gUserName="", gTransId="", gCustomerId="", gCustomerName="", gCustomerBalance="", gCustomerContact="";
 	SQLite::Database * gDatabasePtr = NULL;
 }
 
@@ -111,7 +111,9 @@ int returncheck(int r)
 return 0;
 }
 
-void insertAndPrint(float principleAmt, float addLess, float netAmt, std::string principleAmtString, std::string addLessString, std::string netAmtString, std::string customerId, std::string userId, std::string transId){
+void insertAndPrint(float principleAmt, float addLess, float netAmt, std::string principleAmtString, std::string addLessString, 
+	std::string netAmtString, std::string customerId, std::string userId, std::string transId, std::string gCustomerName, 
+	std::string gCustomerContact, std::string gCustomerBalance, std::string gUserName){
 
 	klok::pc::Transaction toInsert;
 	toInsert.cust_id = customerId;
@@ -119,7 +121,7 @@ void insertAndPrint(float principleAmt, float addLess, float netAmt, std::string
 	toInsert.gross_amt = principleAmtString;
 	toInsert.add_less = addLessString;
 	toInsert.net_amt = netAmtString;
-	// toInsert.date_time = 
+
 	if(klok::pc::Transaction::InsertIntoTable(getDatabase(),toInsert)==0)
 	{
 	
@@ -149,23 +151,33 @@ void insertAndPrint(float principleAmt, float addLess, float netAmt, std::string
 	    	strcat(buff,"      mORE bLAH... BLAH. Blah.\n");
 	    	strcat(buff,"      soME moRE bLAH..........\n");
 	    	strcat(buff1,"     CASH BILL\n");
-	    	strcat(buff2,"     Bill No       ");
+	    	strcat(buff2,"     Bill No           ");
 	    	strcat(buff2,transId.c_str());
 	    	strcat(buff2,"\n");
-	    	strcat(buff2,"     Name           customer1\n");
-	    	strcat(buff2,"     Contact         contact1\n");
-	    	strcat(buff2,"     Gross Amount         500.10\n");
-	    	strcat(buff2,"     Add/Less             500.10\n");
-	    	strcat(buff2,"     ---------------------------\n");
-	    	strcat(buff3,"  CASH    1000.20\n");
-	    	strcat(buff4,"     Balance            ");
-	    	strcat(buff4,principleAmtString.c_str());
+	    	strcat(buff2,"     Name               ");
+	    	strcat(buff2,gCustomerName.c_str());
+	    	strcat(buff2,"\n");
+	    	strcat(buff2,"     Contact            ");
+	    	strcat(buff2,gCustomerContact.c_str());
+	    	strcat(buff2,"\n");
+	    	strcat(buff2,"     Gross Amount         ");
+	    	strcat(buff2,principleAmtString.c_str());
+	    	strcat(buff2,"\n");
+	    	strcat(buff2,"     Add/Less             ");
+	    	strcat(buff2,addLessString.c_str());
+	    	strcat(buff2,"\n");
+	    	strcat(buff2,"     -------------------------------\n");
+	    	strcat(buff3,"  CASH        ");
+	    	strcat(buff3,netAmtString.c_str());
+	    	strcat(buff3,"\n");
+	    	strcat(buff4,"     Balance                ");
+	    	strcat(buff4,gCustomerBalance.c_str());
 	    	strcat(buff4,"\n");
-	    	strcat(buff4,"     Billing Username  ");
-	    	strcat(buff4,userId.c_str());
+	    	strcat(buff4,"     Billing Username      ");
+	    	strcat(buff4,gUserName.c_str());
 	    	strcat(buff4,"\n");
 	    	strcat(buff4,"       THANK YOU VISIT AGAIN\n");
-	    	strcat(buff4,"       C 1 17:10:47  M/C\n");
+	    	strcat(buff4,"         C 1 17:10:47  M/C\n");
 
 	    	lk_dispclr();
 	        lcd::DisplayText(3,5,"PRINTING BILL 1",1);
@@ -219,7 +231,8 @@ void net_amt(float principleAmt,float addLess)
 	
 	int x = lk_getkey();
 		if(x == klok::pc::KEYS::KEY_ENTER){
-			insertAndPrint(principleAmt,addLess,netAmt,principleAmtString,addLessString,netAmtString,gCustomerId,gUserId,gTransId);
+			insertAndPrint(principleAmt,addLess,netAmt,principleAmtString,addLessString,netAmtString,gCustomerId,gUserId,gTransId, 
+			gCustomerName,gCustomerContact,gCustomerBalance,gUserName);
 		}
 }
 
@@ -253,6 +266,9 @@ void display_customer_details(const klok::pc::Customer & inCustomer){
 	std::string Cust_Bal = "Balance Amt:" + inCustomer.cur_amt;
 	lcd::DisplayText(2,0,Cust_Bal.c_str(),0);
 	printf("%s\n",Cust_Bal.c_str());
+	gCustomerName = inCustomer.name;
+	gCustomerBalance = inCustomer.cur_amt;
+	gCustomerContact = inCustomer.contact;
 	lcd::DisplayText(4,0,"Press Enter once data have been confirmed",0);
 
 	int x = lk_getkey();
@@ -288,8 +304,8 @@ void getCustomerDetails(){
 
 			for(int i = 0; i != allCustomers.size(); i++)
 			{
-				printf("Userid :%s\n",allCustomers[i].id.c_str() );
-				printf("Username :%s\n",allCustomers[i].name.c_str() );
+				printf("CustomerId :%s\n",allCustomers[i].id.c_str() );
+				printf("CustomerName :%s\n",allCustomers[i].name.c_str() );
 			}	
 
 			klok::pc::MenuResult res;
@@ -302,7 +318,7 @@ void getCustomerDetails(){
 				display_customer_details(allCustomers[res.selectedIndex]);
 			}
 		}else{
-		printf("failed to GetAllFromDatabase \n");
+		printf("failed to GetAllFromDatabase -> getCustomerDetails \n");
 		// failed
 		}
 }
@@ -680,6 +696,7 @@ int main(int argc, const char* argv[])
 						if(userObj.password == pwd )
 						{
 							gUserId = user;
+							gUserName = userObj.name;
 							main_menu(user,pwd);
 							printf("main_menu\n");
 						}
@@ -697,35 +714,4 @@ AGAIN_ASK_USER_DETAILS:
 		while(false);
 
 	}
-
-LOGIN_SUCCESS:
-	lk_dispclr();
-	lcd::DisplayText(2,4,"Login Success",1);
-	sleep(2);
-
-	return 0;
 }
-	// try
-	// {
- //    // Open a database file
- //    SQLite::Database    db("PayCollect.db");
-
- //    // Compile a SQL query, containing one parameter (index 1)
- //    SQLite::Statement   query(db, "SELECT * FROM pay_coll_user ");
-
- //    // Bind the integer value 6 to the first parameter of the SQL query
- //    // Loop to execute the query step by step, to get rows of result
-	//     while (query.executeStep())
-	//     {
-	//         // Demonstrate how to get some typed column value
-	//         int         id      = query.getColumn(0);
-	//         const char* value   = query.getColumn(1);
-
-	//         std::cout << "row: " << id << ", " << value << ", "<< std::endl;
-	//     }
-	// }
-	// catch (std::exception& e)
-	// {
- //    std::cout << "exception: " << e.what() << std::endl;
-	// }
-
