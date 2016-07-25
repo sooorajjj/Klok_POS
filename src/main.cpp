@@ -16,7 +16,7 @@ extern "C"{
 }
 
 namespace {
-	std::string gUserId ="",gUserName="", gTransId="", gCustomerId="", gCustomerName="", gCustomerBalance="", gCustomerContact="";
+	std::string gUserId="", gUserName="", gTransId="", gCustomerId="", gCustomerName="", gCustomerBalance="", gCustomerContact="";
 	SQLite::Database * gDatabasePtr = NULL;
 }
 
@@ -111,9 +111,9 @@ int returncheck(int r)
 return 0;
 }
 
-void insertAndPrint(float principleAmt, float addLess, float netAmt, std::string principleAmtString, std::string addLessString, 
-	std::string netAmtString, std::string customerId, std::string userId, std::string transId, std::string gCustomerName, 
-	std::string gCustomerContact, std::string gCustomerBalance, std::string gUserName){
+void insertAndPrint(std::string principleAmtString, std::string addLessString, std::string netAmtString,
+	std::string customerId, std::string userId, std::string transId, std::string gCustomerName, std::string gCustomerContact,
+	std::string gCustomerBalance, std::string gUserName){
 
 	klok::pc::Transaction toInsert;
 	toInsert.cust_id = customerId;
@@ -124,15 +124,10 @@ void insertAndPrint(float principleAmt, float addLess, float netAmt, std::string
 
 	if(klok::pc::Transaction::InsertIntoTable(getDatabase(),toInsert)==0)
 	{
-	
-	char buff[200],buff1[100],buff2[200],buff3[100],buff4[100];
+	// char buff[200],buff1[100],buff2[200],buff3[100],buff4[100];
+ 	std::string buff, buff1, buff2, buff3, buff4;
  	int ret;
-    memset(buff,0,200);
-    memset(buff1,0,100);
-    memset(buff2,0,200);
-    memset(buff3,0,100);
-    memset(buff4,0,100);
-    lk_dispclr();
+        lk_dispclr();
 	lcd::DisplayText(1,0,"Continue printing",1);
     lcd::DisplayText(4,0,"Press Enter ",0);
 	int x = lk_getkey();
@@ -146,52 +141,51 @@ void insertAndPrint(float principleAmt, float addLess, float netAmt, std::string
 	        lk_getkey();
 	        return;
 	    	}
-	        strcat(buff,"            Klok Innovations\n\n");
-	    	strcat(buff,"      BLAH.. BLAH... BLAH....\n");
-	    	strcat(buff,"      mORE bLAH... BLAH. Blah.\n");
-	    	strcat(buff,"      soME moRE bLAH..........\n");
-	    	strcat(buff1,"     CASH BILL\n");
-	    	strcat(buff2,"     Bill No           ");
-	    	strcat(buff2,transId.c_str());
-	    	strcat(buff2,"\n");
-	    	strcat(buff2,"     Name               ");
-	    	strcat(buff2,gCustomerName.c_str());
-	    	strcat(buff2,"\n");
-	    	strcat(buff2,"     Contact            ");
-	    	strcat(buff2,gCustomerContact.c_str());
-	    	strcat(buff2,"\n");
-	    	strcat(buff2,"     Gross Amount         ");
-	    	strcat(buff2,principleAmtString.c_str());
-	    	strcat(buff2,"\n");
-	    	strcat(buff2,"     Add/Less             ");
-	    	strcat(buff2,addLessString.c_str());
-	    	strcat(buff2,"\n");
-	    	strcat(buff2,"     -------------------------------\n");
-	    	strcat(buff3,"  CASH        ");
-	    	strcat(buff3,netAmtString.c_str());
-	    	strcat(buff3,"\n");
-	    	strcat(buff4,"     Balance                ");
-	    	strcat(buff4,gCustomerBalance.c_str());
-	    	strcat(buff4,"\n");
-	    	strcat(buff4,"     Billing Username      ");
-	    	strcat(buff4,gUserName.c_str());
-	    	strcat(buff4,"\n");
-	    	strcat(buff4,"       THANK YOU VISIT AGAIN\n");
-	    	strcat(buff4,"         C 1 17:10:47  M/C\n");
-
+	        buff.append("            Klok Innovations\n\n");
+	    	buff.append("      BLAH.. BLAH... BLAH....\n");
+	    	buff.append("      mORE bLAH... BLAH. Blah.\n");
+	    	buff.append("      soME moRE bLAH..........\n");
+	    	buff1.append("     CASH BILL\n");
+	    	buff2.append("     Bill No           ");
+	    	buff2.append(transId);
+	    	buff2.append("\n");
+	    	buff2.append("     Name               ");
+	    	buff2.append(gCustomerName);
+	    	buff2.append("\n");
+	    	buff2.append("     Contact            ");
+	    	buff2.append(gCustomerContact);
+	    	buff2.append("\n");
+	    	buff2.append("     Gross Amount         ");
+	    	buff2.append(principleAmtString);
+	    	buff2.append("\n");
+	    	buff2.append("     Add/Less             ");
+ 			buff2.append(addLessString);
+	    	buff2.append("\n");
+	    	buff2.append("     -------------------------------\n");
+	    	buff3.append("  CASH     ");
+	    	buff3.append(netAmtString);
+	    	buff3.append("\n");
+	    	buff4.append("     Balance                ");
+	    	buff4.append(gCustomerBalance);
+	    	buff4.append("\n");
+	    	buff4.append("     Billing Username      ");
+	    	buff4.append(gUserName);
+	    	buff4.append("\n");
+	    	buff4.append("       THANK YOU VISIT AGAIN\n");
+	    	buff4.append("         C 1 17:10:47  M/C\n");	   
 	    	lk_dispclr();
-	        lcd::DisplayText(3,5,"PRINTING BILL 1",1);
+	        lcd::DisplayText(3,5,"PRINTING BILL",1);
 
-	        ret=printer::WriteText(buff,strlen(buff),1);
+	        ret=printer::WriteText(buff.c_str(),buff.size(),1);
 		    returncheck(ret);
 		    prn_paper_feed(1);
-		    ret=printer::WriteText(buff1,strlen(buff1),2);
+		    ret=printer::WriteText(buff1.c_str(),buff1.size(),2);
 		    returncheck(ret);
-		    ret=printer::WriteText(buff2,strlen(buff2),1);
+		    ret=printer::WriteText(buff2.c_str(),buff2.size(),1);
 		    returncheck(ret);
-		    ret=printer::WriteText(buff3,strlen(buff3),2);
+		    ret=printer::WriteText(buff3.c_str(),buff3.size(),2);
 		    returncheck(ret);
-		    ret=printer::WriteText(buff4,strlen(buff4),1);
+		    ret=printer::WriteText(buff4.c_str(),buff4.size(),1);
 		    returncheck(ret);
 		    ret=printer::WriteText("\n\n\n",3,1);
 		    returncheck(ret);
@@ -231,7 +225,7 @@ void net_amt(float principleAmt,float addLess)
 	
 	int x = lk_getkey();
 		if(x == klok::pc::KEYS::KEY_ENTER){
-			insertAndPrint(principleAmt,addLess,netAmt,principleAmtString,addLessString,netAmtString,gCustomerId,gUserId,gTransId, 
+			insertAndPrint(principleAmtString,addLessString,netAmtString,gCustomerId,gUserId,gTransId, 
 			gCustomerName,gCustomerContact,gCustomerBalance,gUserName);
 		}
 }
