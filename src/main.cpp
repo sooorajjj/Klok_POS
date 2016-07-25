@@ -124,7 +124,7 @@ int returncheck(int r)
 
 void insertAndPrint(std::string principleAmtString, std::string addLessString, std::string netAmtString,
                     std::string customerId, std::string userId, std::string transId, std::string gCustomerName,
-                    std::string gCustomerContact, std::string gCustomerBalance, std::string gUserName)
+                    std::string gCustomerContact, std::string gUserName, std::string customerBalance)
 {
 
     klok::pc::Transaction toInsert;
@@ -136,7 +136,7 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
 
     if(klok::pc::Transaction::InsertIntoTable(getDatabase(), toInsert) == 0)
     {
-        // char buff[200],buff1[100],buff2[200],buff3[100],buff4[100];
+
         std::string buff, buff1, buff2, buff3, buff4;
 
         lk_dispclr();
@@ -177,11 +177,11 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
             buff2.append(addLessString);
             buff2.append("\n");
             buff2.append("     -------------------------------\n");
-            buff3.append("  CASH     ");
+            buff3.append("  CASH      ");
             buff3.append(netAmtString);
             buff3.append("\n");
             buff4.append("     Balance                ");
-            buff4.append(gCustomerBalance);
+            buff4.append(customerBalance);
             buff4.append("\n");
             buff4.append("     Billing Username      ");
             buff4.append(gUserName);
@@ -235,6 +235,37 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
     }
 }
 
+void updateCustomerBalance(float netAmt, std::string principleAmtString, std::string addLessString, 
+						   std::string netAmtString, std::string gCustomerBalance)
+{
+
+	klok::pc::Customer toUpdate;
+
+	int scanned = atoi(gCustomerBalance.c_str());
+	float currentAmt = scanned - netAmt;
+
+	char customerBalance[10] = {0};
+	sprintf(customerBalance ,"%0.2f", currentAmt);
+
+	toUpdate.id = gCustomerId;
+	toUpdate.cur_amt = customerBalance;
+
+	insertAndPrint(principleAmtString, addLessString, netAmtString, gCustomerId, gUserId, gTransId, 
+	               gCustomerName, gCustomerContact, gUserName, customerBalance);
+
+	if(klok::pc::Customer::UpdateCustomerBalance(getDatabase(),gCustomerId.c_str(),toUpdate) ==0)
+
+	{
+		printf("Getting selected cust_id for user %s is \n", gCustomerId.c_str());
+        return;
+
+    }else{
+        printf("CustomerId  %s is not available\n", gCustomerId.c_str());
+        return;
+        
+    }
+}
+
 void net_amt(float principleAmt, float addLess)
 {
     lk_getkey();
@@ -245,9 +276,9 @@ void net_amt(float principleAmt, float addLess)
     char addLessString[30] = {0};
     char netAmtString[30] = {0};
 
-    sprintf(principleAmtString, "%f", principleAmt);
-    sprintf(addLessString, "%f", addLess);
-    sprintf(netAmtString, "%f", netAmt);
+    sprintf(principleAmtString, "%0.2f", principleAmt);
+    sprintf(addLessString, "%0.2f", addLess);
+    sprintf(netAmtString, "%0.2f", netAmt);
 
     lcd::DisplayText(1, 0, "Net Amount", 0);
     lcd::DisplayText(3, 0, netAmtString, 0);
@@ -255,8 +286,7 @@ void net_amt(float principleAmt, float addLess)
     int x = lk_getkey();
     if(x == klok::pc::KEYS::KEY_ENTER)
     {
-        insertAndPrint(principleAmtString, addLessString, netAmtString, gCustomerId, gUserId,
-                       gTransId, gCustomerName, gCustomerContact, gCustomerBalance, gUserName);
+        updateCustomerBalance(netAmt, principleAmtString, addLessString, netAmtString, gCustomerBalance);
     }
 }
 
@@ -432,7 +462,7 @@ void Billing()
         lk_dispclr();
 
         menu.start = 0;
-        menu.maxEntries = 3;
+        menu.maxEntries = 2;
         strcpy(menu.menu[0],"Pay Collection");
         strcpy(menu.menu[1],"POS");
 
@@ -614,7 +644,7 @@ void Settings()
         lk_dispclr();
 
         menu.start = 0;
-        menu.maxEntries = 2;
+        menu.maxEntries = 3;
         strcpy(menu.menu[0],"User Rights" );
         strcpy(menu.menu[1],"Download");
         strcpy(menu.menu[2],"Upload");

@@ -50,7 +50,7 @@ namespace klok
         {
         public:
             Customer() {}
-            virtual Customer() {}
+            virtual ~Customer() {}
 
             std::string id, name,contact, cur_amt, sub_amt, due_amt;
 
@@ -58,11 +58,13 @@ namespace klok
             static int32_t CreateTable(SQLite::Database& db, bool dropIfExist);
             static int32_t GetNextTransactionIDForCustomer(SQLite::Database& db, const char* id, std::string& outID);
             static int32_t GetAllFromDatabase(SQLite::Database& db, std::vector<Customer>& outCustomers, uint32_t maxToRead);
+            static int32_t UpdateCustomerBalance(SQLite::Database & db,const char* id, Customer& toUpdate);
 
             struct Queries
             {
                 static const char* TABLE_NAME;
                 static const char* GET_ALL_QUERY;
+                static const char* UPDATE_CUSTOMER_BALANCE;
                 static const char* CREATE_CUSTOMER_TABLE_QUERY;
                 static const char* DROP_CUSTOMER_TABLE_QUERY;
                 static const char* SELECT_CUSTOMER_WITH_ID_FROM_TABLE;
@@ -74,7 +76,7 @@ namespace klok
         {
         public:
             Transaction() {}
-            virtual Transaction() {}
+            virtual ~Transaction() {}
 
             std::string trans_id, cust_id, user_id, gross_amt, add_less, net_amt, date_time;
 

@@ -240,6 +240,27 @@ namespace klok
             return 0;
         }
 
+        int32_t Customer::UpdateCustomerBalance(SQLite::Database & db,const char* id, Customer& toUpdate)
+
+		{
+			try
+			{
+				SQLite::Statement query(db,Customer::Queries::UPDATE_CUSTOMER_BALANCE);
+				query.bind(1,toUpdate.cur_amt);
+				query.bind(2,toUpdate.id);
+
+				query.executeStep();
+             
+			}
+			catch(std::exception & e)
+			{
+				std::printf("Customer::UpdateCustomerBalance -> Fatal Error %s\n", e.what());
+				return -1;
+			}
+
+			return 0;
+		}
+
         int32_t Transaction::GetAllFromDatabase(SQLite::Database& db, std::vector<Transaction>& outTransactions, uint32_t maxToRead)
         {
             try
@@ -380,6 +401,7 @@ namespace klok
             "Sub_Amt INTEGER NOT NULL,"
             "Due_Amt INTEGER NOT NULL);";
 
+		const char * Customer::Queries::UPDATE_CUSTOMER_BALANCE = "UPDATE pay_coll_cust SET Cur_Amt=? WHERE Cust_ID=?;";
         const char * Customer::Queries::DROP_CUSTOMER_TABLE_QUERY = "DROP TABLE pay_coll_cust IF EXISTS;";
 
         const char * Transaction::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_trans";
