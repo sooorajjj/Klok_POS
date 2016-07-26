@@ -124,8 +124,7 @@ int returncheck(int r)
 }
 
 void insertAndPrint(std::string principleAmtString, std::string addLessString, std::string netAmtString,
-                    std::string customerId, std::string userId, std::string transId, std::string gCustomerName,
-                    std::string gCustomerContact, std::string gUserName, std::string customerBalance)
+                    std::string customerId, std::string userId, std::string transId, std::string customerBalance)
 {
 
     klok::pc::Transaction toInsert;
@@ -255,7 +254,7 @@ void updateCustomerBalance(float netAmt, std::string principleAmtString, std::st
 	toUpdate.cur_amt = customerBalance;
 
 	insertAndPrint(principleAmtString, addLessString, netAmtString, gCustomerId, gUserId, gTransId, 
-	               gCustomerName, gCustomerContact, gUserName, customerBalance);
+	               customerBalance);
 
 	if(klok::pc::Customer::UpdateCustomerBalance(getDatabase(),gCustomerId.c_str(),toUpdate) ==0)
 
@@ -300,26 +299,67 @@ void add_less(float principleAmt)
     lk_dispclr();
 
     if(x == klok::pc::KEYS::KEY_ENTER)
-    {
-        int res = 0;
-        char addLess[10]= {0};
+	{
 
-        lcd::DisplayText(1, 0, "Add/Less", 0);
-        res = lk_getnumeric(4, 0, (unsigned char*)addLess, 10, strlen(addLess));
-        float scanned = 0;
+		lcd::DisplayText(2, 5, "Add/Less", 1);
+	    lcd::DisplayText(4, 0, "Press F2 to Add OR F3 to Less", 0);
 
-        if(sscanf(addLess, "%f", &scanned) == 1 && res > 0)
-        {
-            net_amt(principleAmt, scanned);
-            lcd::DisplayText(4, 0, "Press Enter once data have been confirmed", 0);
-        }
-        else
-        {
-            lk_dispclr();
-            lcd::DisplayText(4, 0, "Enter correct Amt", 0);
-            lk_getkey();
-        }
-    }
+	    int x = lk_getkey();
+  	    lk_dispclr();
+
+	    if(x == klok::pc::KEYS::KEY_F2)
+	    {
+	    	
+	        int res = 0;
+	        char addLess[10]= {0};
+
+	        lcd::DisplayText(1, 0, "Type in Amount to ADD", 0);
+	        res = lk_getnumeric(4, 0, (unsigned char*)addLess, 10, strlen(addLess));
+	        float scanned = 0;
+
+	        if(sscanf(addLess, "%f", &scanned) == 1 && res > 0)
+	        {
+	            net_amt(principleAmt, scanned);
+	            lcd::DisplayText(4, 0, "Press Enter once data have been confirmed", 0);
+	        }
+	        else
+	        {
+	            lk_dispclr();
+	            lcd::DisplayText(4, 0, "Enter correct Amt", 0);
+	            lk_getkey();
+	        }
+	    
+	    }
+	    else if(x == klok::pc::KEYS::KEY_F3)
+	    {
+	    	int res = 0;
+	        char addLess[10]= {0};
+
+	        lcd::DisplayText(1, 0, "Type Amount to LESS", 0);
+	        res = lk_getnumeric(4, 0, (unsigned char*)addLess, 10, strlen(addLess));
+	        float scanned = 0;
+
+	        if(sscanf(addLess, "%f", &scanned) == 1 && res > 0)
+	        {
+	            net_amt(principleAmt, -scanned);
+	            lcd::DisplayText(4, 0, "Press Enter once data have been confirmed", 0);
+	        }
+	        else
+	        {
+	            lk_dispclr();
+	            lcd::DisplayText(4, 0, "Enter correct Amt", 0);
+	            lk_getkey();
+	        }
+	    }
+	}
+	else
+	{
+    	lk_dispclr();
+      	lcd::DisplayText(4, 0, "Enter correct Amt", 0);
+        lk_getkey();
+	}
+
+    
 }
 
 void display_customer_details(const klok::pc::Customer& inCustomer)
