@@ -28,7 +28,7 @@ namespace klok
             User() {}
             virtual ~User() {}
 
-            std::string id, name, password;
+            std::string id, name, password, company_id, company_name, company_address;
 
             static int32_t FromDatabase(SQLite::Database& db, const char* id, User& outUser);
             static int32_t CreateTable(SQLite::Database& db, bool dropIfExist);

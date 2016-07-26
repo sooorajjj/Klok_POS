@@ -32,6 +32,9 @@ link_directories(
 add_subdirectory("lib/SQLiteCpp")
 add_subdirectory("lib/visiontek")
 
+#export VISIONTEK_CC="/home/klok/GL14-SDK/TOOL_CHAIN/gcc-4.1.2-glibc-2.5-nptl-3/arm-none-linux-gnueabi/bin//arm-none-linux-gnueabi-gcc"
+#export VISIONTEK_CXX="/home/klok/GL14-SDK/TOOL_CHAIN/gcc-4.1.2-glibc-2.5-nptl-3/arm-none-linux-gnueabi/bin//arm-none-linux-gnueabi-g++"
+
 
 set(CMAKE_C_COMPILER $ENV{VISIONTEK_CC})
 set(CMAKE_CXX_COMPILER $ENV{VISIONTEK_CXX})

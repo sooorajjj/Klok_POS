@@ -79,6 +79,9 @@ namespace klok
                     outUser.id = query.getColumn(0).getString();
                     outUser.name = query.getColumn(1).getString();
                     outUser.password = query.getColumn(2).getString();
+                    outUser.company_id = query.getColumn(3).getString();
+                    outUser.company_name = query.getColumn(4).getString();
+                    outUser.company_address = query.getColumn(5).getString();
                     return 0;
                 }
                 else
@@ -384,7 +387,10 @@ namespace klok
             "CREATE TABLE pay_coll_user ("
             "User_ID       INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
             "User_Name 	 VARCHAR(20) NOT NULL UNIQUE,"
-            "Password	  	 VARCHAR(8) NOT NULL );";
+            "Password	  	 VARCHAR(8) NOT NULL,"
+            "Comp_ID        INTEGER NOT NULL,"
+            "Comp_Name      VARCHAR(25) NOT NULL,"
+            "Comp_Address   VARCHAR(100) NOT NULL);";
 
         const char * User::Queries::DROP_USER_TABLE_QUERY = "DROP TABLE pay_coll_user IF EXISTS;";
 

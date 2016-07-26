@@ -18,7 +18,8 @@ extern "C"
 
 namespace
 {
-std::string gUserId = "", gUserName = "", gTransId = "", gCustomerId = "", gCustomerName = "", gCustomerBalance = "", gCustomerContact = "";
+std::string gUserId = "", gUserName = "", gTransId = "", gCustomerId = "", gCustomerName = "", gCustomerBalance = "", gCustomerContact = "",
+            gCompanyName = "" ,gCompanyAddress = "";
 SQLite::Database* gDatabasePtr = NULL;
 }
 
@@ -156,38 +157,41 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
                 return;
             }
 
-            buff.append("            Klok Innovations\n\n");
-            buff.append("      BLAH.. BLAH... BLAH....\n");
-            buff.append("      mORE bLAH... BLAH. Blah.\n");
-            buff.append("      soME moRE bLAH..........\n");
-            buff1.append("     CASH BILL\n");
-            buff2.append("     Bill No           ");
+            buff.append("             ");
+            buff.append(gCompanyName);
+            buff.append("\n\n");
+            buff.append("");
+            buff.append(gCompanyAddress);
+            buff.append("\n");
+            buff1.append("      CASH BILL\n\n");
+            buff2.append("     Bill No             ");
             buff2.append(transId);
             buff2.append("\n");
-            buff2.append("     Name               ");
+            buff2.append("     Name                ");
             buff2.append(gCustomerName);
             buff2.append("\n");
-            buff2.append("     Contact            ");
+            buff2.append("     Contact             ");
             buff2.append(gCustomerContact);
             buff2.append("\n");
-            buff2.append("     Gross Amount         ");
+            buff2.append("     Gross Amount        ");
             buff2.append(principleAmtString);
             buff2.append("\n");
-            buff2.append("     Add/Less             ");
+            buff2.append("     Add/Less            ");
             buff2.append(addLessString);
             buff2.append("\n");
             buff2.append("     -------------------------------\n");
             buff3.append("  CASH      ");
             buff3.append(netAmtString);
             buff3.append("\n");
-            buff4.append("     Balance                ");
+            buff4.append("     Balance             ");
             buff4.append(customerBalance);
             buff4.append("\n");
-            buff4.append("     Billing Username      ");
+            buff4.append("     Billing Username    ");
             buff4.append(gUserName);
             buff4.append("\n");
-            buff4.append("       THANK YOU VISIT AGAIN\n");
-            buff4.append("         C 1 17:10:47  M/C\n");
+            buff4.append("     -------------------------------\n");
+            buff4.append("          THANK YOU VISIT AGAIN\n");
+            buff4.append("            C 1 17:10:47  M/C\n");
 
             lk_dispclr();
             lcd::DisplayText(3, 5, "PRINTING BILL", 1);
@@ -763,7 +767,7 @@ int main(int argc, const char* argv[])
     char buff[80] = {0};
     struct tm intim;
     sprintf(autobuf, "%s-%02d%02d%02d%02d%02d%04d.txt", buff, intim.tm_hour, intim.tm_min, intim.tm_sec, intim.tm_mday, intim.tm_mon + 1, intim.tm_year + 1900);
-    printf("%s\n", autobuf);
+    printf("%s\n", buff);
 
     while(1)
     {
@@ -824,6 +828,8 @@ int main(int argc, const char* argv[])
                         {
                             gUserId = user;
                             gUserName = userObj.name;
+                            gCompanyName = userObj.company_name;
+                            gCompanyAddress = userObj.company_address;
                             main_menu(user, pwd);
                             printf("main_menu\n");
                         }
