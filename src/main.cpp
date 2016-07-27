@@ -20,7 +20,7 @@ extern "C"
 namespace
 {
 std::string gUserId = "", gUserName = "", gTransId = "", gCustomerId = "", gCustomerName = "", gCustomerBalance = "", gCustomerContact = "",
-            gCompanyName = "", gCompanyAddress = "", gCurrentTime = "";
+            gCompanyName = "", gCompanyAddress = "";
 SQLite::Database* gDatabasePtr = NULL;
 }
 
@@ -86,7 +86,6 @@ std::string getCurrentTime()
     sprintf(buffer, "%04d-%02d-%02d %02d:%02d:%02d", 1900 + ltm->tm_year, 1 + ltm->tm_mon,
     ltm->tm_mday,1 + ltm->tm_hour, 1 + ltm->tm_min, 1 + ltm->tm_sec);
 
-    gCurrentTime = buffer;
     return buffer;
 
 }
@@ -155,7 +154,7 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
     if(klok::pc::Transaction::InsertIntoTable(getDatabase(), toInsert) == 0)
     {
 
-        std::string buff, buff1, buff2, buff3, buff4;
+        std::string buff, buff1, buff2, buff3, buff4, buff5;
 
         lk_dispclr();
         lcd::DisplayText(1, 0, "Continue printing",1);
@@ -174,43 +173,42 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
                 return;
             }
 
-            buff.append("             ");
+            buff.append(" ");
             buff.append(gCompanyName);
-            buff.append("\n\n");
-            buff.append("");
-            buff.append(gCompanyAddress);
-            buff.append("\n");
-            buff1.append("      CASH BILL\n\n");
-            buff2.append("     Bill No             ");
-            buff2.append(transId);
-            buff2.append("\n");
-            buff2.append("     Name                ");
-            buff2.append(gCustomerName);
-            buff2.append("\n");
-            buff2.append("     Contact             ");
-            buff2.append(gCustomerContact);
-            buff2.append("\n");
-            buff2.append("     Gross Amount        ");
-            buff2.append(principleAmtString);
-            buff2.append("\n");
-            buff2.append("     Add/Less            ");
-            buff2.append(addLessString);
-            buff2.append("\n");
-            buff2.append("     -------------------------------\n");
-            buff3.append("  CASH      ");
-            buff3.append(netAmtString);
+            buff1.append("");
+            buff1.append(gCompanyAddress);
+            buff1.append("\n");
+            buff2.append("      CASH BILL\n");
+            buff3.append("     Bill No             ");
+            buff3.append(transId);
             buff3.append("\n");
-            buff4.append("     Balance             ");
-            buff4.append(customerBalance);
+            buff3.append("     Name                ");
+            buff3.append(gCustomerName);
+            buff3.append("\n");
+            buff3.append("     Contact             ");
+            buff3.append(gCustomerContact);
+            buff3.append("\n");
+            buff3.append("     Gross Amount        ");
+            buff3.append(principleAmtString);
+            buff3.append("\n");
+            buff3.append("     Add/Less            ");
+            buff3.append(addLessString);
+            buff3.append("\n");
+            buff3.append("     -------------------------------\n");
+            buff4.append("  CASH       ");
+            buff4.append(netAmtString);
             buff4.append("\n");
-            buff4.append("     Billing Username    ");
-            buff4.append(gUserName);
-            buff4.append("\n");
-            buff4.append("     -------------------------------\n");
-            buff4.append("          THANK YOU VISIT AGAIN\n");
-            buff4.append("           ");
-            buff4.append(getCurrentTime());
-            buff4.append("\n");
+            buff5.append("     Balance             ");
+            buff5.append(customerBalance);
+            buff5.append("\n");
+            buff5.append("     Billing Username    ");
+            buff5.append(gUserName);
+            buff5.append("\n");
+            buff5.append("     -------------------------------\n");
+            buff5.append("          THANK YOU VISIT AGAIN\n");
+            buff5.append("           ");
+            buff5.append(getCurrentTime());
+            buff5.append("\n");
 
 
             lk_dispclr();
@@ -218,20 +216,23 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
 
             int ret;
 
-            ret = printer::WriteText(buff.c_str(), buff.size(), 1);
+            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+            returncheck(ret);
+
+            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
             returncheck(ret);
             prn_paper_feed(1);
 
-            ret = printer::WriteText(buff1.c_str(), buff1.size(), 2);
+            ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
             returncheck(ret);
 
-            ret = printer::WriteText(buff2.c_str(), buff2.size(), 1);
+            ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
             returncheck(ret);
 
-            ret = printer::WriteText(buff3.c_str(), buff3.size(), 2);
+            ret = printer::WriteText(buff4.c_str(), buff4.size(), 2);
             returncheck(ret);
 
-            ret = printer::WriteText(buff4.c_str(), buff4.size(), 1);
+			ret = printer::WriteText(buff5.c_str(), buff5.size(), 1);
             returncheck(ret);
 
             ret = printer::WriteText("\n\n\n", 3, 1);
@@ -687,6 +688,66 @@ void UserRights()
 
 void Download()
 {
+	lk_dispclr();
+	lcd::DisplayText(2, 0, "Insert the usb device and press ENTER", 0);
+
+	int ret=0;
+	FILE *fp;
+    	
+	fp=fopen("/etc/mtab", "r");
+	char str[100]="", flag=0;
+
+		if (fp==NULL)
+		fprintf(stderr, "File open Error\n");
+
+		 while((fgets(str, 80, fp))!=NULL)
+		{
+       		if((strstr(str, "/mnt/usb")) != NULL)
+			flag=1;
+		}
+
+	fclose(fp);
+
+        int x = lk_getkey();
+
+        if(x == klok::pc::KEYS::KEY_ENTER && flag==1)
+        {
+        	lk_dispclr();
+			lcd::DisplayText(2, 2, "Already Mounted", 1);
+			lcd::DisplayText(5, 0, "Press Any Key to Exit", 0);
+			lk_getkey();
+			return ;		
+        }
+        else if(x == klok::pc::KEYS::KEY_ENTER && flag==0)
+        {
+        	ret=system("mount -t vfat /dev/sda1 /mnt/usb");
+			if (ret==256)
+			ret=system("mount -t vfat /dev/sdb1 /mnt/usb");
+			if (ret==256)
+        		ret=system("mount -t vfat /dev/sdc1 /mnt/usb");
+			if (ret==256)
+        		ret=system("mount -t vfat /dev/sdd1 /mnt/usb");
+	
+			if ( ret== 0)
+			{
+				lk_dispclr();
+				fprintf(stdout, "mass storage mounted\n");
+				lcd::DisplayText(3, 2, "MOUNT SUCCESS", 1);
+				lcd::DisplayText(5, 0, "Press Any Key to Exit", 0);
+				lk_getkey();
+				return ;
+			}
+			else
+			{
+				lk_dispclr();
+				fprintf(stderr, "Mass storage mounting Failed \n");
+				lcd::DisplayText(3, 2, "MOUNT FAILED", 1);
+                lcd::DisplayText(5, 0, "Press Any Key to Exit", 0);
+                lk_getkey();
+                return ;
+			}
+
+        }	
     printf("Download Activity\n");
 }
 
@@ -828,7 +889,7 @@ int main(int argc, const char* argv[])
     char buff[80] = {0};
     struct tm intim;
     sprintf(autobuf, "%s-%02d%02d%02d%02d%02d%04d.txt", buff, intim.tm_hour, intim.tm_min, intim.tm_sec, intim.tm_mday, intim.tm_mon + 1, intim.tm_year + 1900);
-    printf("Date-Time%s\n", getCurrentTime().c_str());
+    printf("Date-Time : %s\n", getCurrentTime().c_str());
 
     while(1)
     {
