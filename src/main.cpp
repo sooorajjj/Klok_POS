@@ -1,4 +1,5 @@
 #include <iostream>
+#include <ctime>
 #include <stdio.h>
 #include <stdlib.h>
 #include <SQLiteCpp/SQLiteCpp.h>
@@ -19,7 +20,7 @@ extern "C"
 namespace
 {
 std::string gUserId = "", gUserName = "", gTransId = "", gCustomerId = "", gCustomerName = "", gCustomerBalance = "", gCustomerContact = "",
-            gCompanyName = "" ,gCompanyAddress = "";
+            gCompanyName = "", gCompanyAddress = "", gCurrentTime = "";
 SQLite::Database* gDatabasePtr = NULL;
 }
 
@@ -73,6 +74,21 @@ static SQLite::Database& getDatabase()
 const char* getPosCustomerDisplayName(const klok::pc::Customer& inCustomer)
 {
     return inCustomer.id.c_str();
+}
+
+std::string getCurrentTime()
+{
+
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+
+    char buffer[50] = {0};
+    sprintf(buffer, "%04d-%02d-%02d %02d:%02d:%02d", 1900 + ltm->tm_year, 1 + ltm->tm_mon,
+    ltm->tm_mday,1 + ltm->tm_hour, 1 + ltm->tm_min, 1 + ltm->tm_sec);
+
+    gCurrentTime = buffer;
+    return buffer;
+
 }
 
 int returncheck(int r)
@@ -133,6 +149,8 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
     toInsert.gross_amt = principleAmtString;
     toInsert.add_less = addLessString;
     toInsert.net_amt = netAmtString;
+    toInsert.date_time = getCurrentTime();
+
 
     if(klok::pc::Transaction::InsertIntoTable(getDatabase(), toInsert) == 0)
     {
@@ -190,7 +208,10 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
             buff4.append("\n");
             buff4.append("     -------------------------------\n");
             buff4.append("          THANK YOU VISIT AGAIN\n");
-            buff4.append("            C 1 17:10:47  M/C\n");
+            buff4.append("           ");
+            buff4.append(getCurrentTime());
+            buff4.append("\n");
+
 
             lk_dispclr();
             lcd::DisplayText(3, 5, "PRINTING BILL", 1);
@@ -807,7 +828,7 @@ int main(int argc, const char* argv[])
     char buff[80] = {0};
     struct tm intim;
     sprintf(autobuf, "%s-%02d%02d%02d%02d%02d%04d.txt", buff, intim.tm_hour, intim.tm_min, intim.tm_sec, intim.tm_mday, intim.tm_mon + 1, intim.tm_year + 1900);
-    printf("%s\n", buff);
+    printf("Date-Time%s\n", getCurrentTime().c_str());
 
     while(1)
     {
