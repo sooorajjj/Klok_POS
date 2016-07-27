@@ -690,6 +690,7 @@ void Download()
 {
 	lk_dispclr();
 	lcd::DisplayText(2, 0, "Insert the usb device and press ENTER", 0);
+	printf("Download Activity\n");
 
 	int ret=0;
 	FILE *fp;
@@ -714,9 +715,45 @@ void Download()
         {
         	lk_dispclr();
 			lcd::DisplayText(2, 2, "Already Mounted", 1);
-			lcd::DisplayText(5, 0, "Press Any Key to Exit", 0);
-			lk_getkey();
-			return ;		
+			lcd::DisplayText(4, 0, "Press any key to copy database to USB", 0);
+
+				lk_getkey();
+				ret=system("cp /mnt/jffs2/PayCollect.db /mnt/usb/");
+				lk_dispclr();
+				sleep(6);
+				
+					if (ret == 0)
+					{
+					lcd::DisplayText(3,2,"Copying Successfull",0);
+					lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+	                lk_getkey();
+
+					lk_dispclr();
+                	lcd::DisplayText(2,2,"Unmounting disk ..",0);
+					ret = system("umount /mnt/usb");
+					lk_dispclr();
+					
+						if (ret == 0)
+						{
+						lcd::DisplayText(3,2,"Unmout Successfull",0);
+						}
+						else
+						{
+						lcd::DisplayText(3,2,"Unmounting  Failed....",0);
+		                lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+		                lk_getkey();
+		                }
+		            }
+					else
+					{
+					lcd::DisplayText(3,2,"Copying  Failed....",0);
+	                lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+	                ret = system("umount /mnt/usb");
+	                lk_getkey();
+	                }
+
+	        return ;
+
         }
         else if(x == klok::pc::KEYS::KEY_ENTER && flag==0)
         {
@@ -724,17 +761,53 @@ void Download()
 			if (ret==256)
 			ret=system("mount -t vfat /dev/sdb1 /mnt/usb");
 			if (ret==256)
-        		ret=system("mount -t vfat /dev/sdc1 /mnt/usb");
+    		ret=system("mount -t vfat /dev/sdc1 /mnt/usb");
 			if (ret==256)
-        		ret=system("mount -t vfat /dev/sdd1 /mnt/usb");
+    		ret=system("mount -t vfat /dev/sdd1 /mnt/usb");
 	
 			if ( ret== 0)
 			{
 				lk_dispclr();
 				fprintf(stdout, "mass storage mounted\n");
-				lcd::DisplayText(3, 2, "MOUNT SUCCESS", 1);
-				lcd::DisplayText(5, 0, "Press Any Key to Exit", 0);
+				lcd::DisplayText(2, 2, "MOUNT SUCCESS", 1);
+				lcd::DisplayText(4, 0, "Press any key to copy database to USB", 0);
+
 				lk_getkey();
+				ret=system("cp /mnt/jffs2/PayCollect.db /mnt/usb/");
+				
+				lk_dispclr();
+				sleep(6);
+				
+					if (ret == 0)
+					{
+					lcd::DisplayText(3,2,"Copying Successfull",0);
+					lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+	                lk_getkey();
+
+					lk_dispclr();
+                	lcd::DisplayText(2,2,"Unmounting disk ..",0);
+					ret = system("umount /mnt/usb");
+					lk_dispclr();
+
+						if (ret == 0)
+						{
+						lcd::DisplayText(3,2,"Unmout Successfull",0);
+						}
+						else
+						{
+						lcd::DisplayText(3,2,"Unmounting  Failed....",0);
+		                lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+		                lk_getkey();
+		                }
+		            }
+					else
+					{
+					lcd::DisplayText(3,2,"Copying  Failed....",0);
+	                lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+	                ret = system("umount /mnt/usb");
+	                lk_getkey();
+	                }
+				                
 				return ;
 			}
 			else
@@ -747,13 +820,143 @@ void Download()
                 return ;
 			}
 
-        }	
-    printf("Download Activity\n");
+        }
 }
 
 void Upload()
 {
+	lk_dispclr();
+	lcd::DisplayText(2, 0, "Insert the usb device and press ENTER", 0);
     printf("Upload Activity\n");
+
+	int ret=0;
+	FILE *fp;
+    	
+	fp=fopen("/etc/mtab", "r");
+	char str[100]="", flag=0;
+
+		if (fp==NULL)
+		fprintf(stderr, "File open Error\n");
+
+		 while((fgets(str, 80, fp))!=NULL)
+		{
+       		if((strstr(str, "/mnt/usb")) != NULL)
+			flag=1;
+		}
+
+	fclose(fp);
+
+        int x = lk_getkey();
+
+        if(x == klok::pc::KEYS::KEY_ENTER && flag==1)
+        {
+        	lk_dispclr();
+			lcd::DisplayText(2, 2, "Already Mounted", 1);
+			lcd::DisplayText(4, 0, "Press any key to copy database to device", 0);
+
+				lk_getkey();
+				ret=system("cp /mnt/usb/PayCollect.db /mnt/jffs2/");
+				
+				lk_dispclr();
+				sleep(6);
+				
+					if (ret == 0)
+					{
+					lcd::DisplayText(3,2,"Copying Successfull",0);
+					lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+	                lk_getkey();
+
+					lk_dispclr();
+                	lcd::DisplayText(2,2,"Unmounting disk ..",0);
+					ret = system("umount /mnt/usb");
+
+						lk_dispclr();
+						if (ret == 0)
+						{
+						lcd::DisplayText(3,2,"Unmout Successfull",0);
+						}
+						else
+						{
+						lcd::DisplayText(3,2,"Unmounting  Failed....",0);
+		                lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+		                lk_getkey();
+		                }
+		            }
+					else
+					{
+					lcd::DisplayText(3,2,"Copying  Failed....",0);
+	                lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+	                ret = system("umount /mnt/usb");
+	                lk_getkey();
+	                }
+	        return ;
+        }
+        else if(x == klok::pc::KEYS::KEY_ENTER && flag==0)
+        {
+        	ret=system("mount -t vfat /dev/sda1 /mnt/usb");
+			if (ret==256)
+			ret=system("mount -t vfat /dev/sdb1 /mnt/usb");
+			if (ret==256)
+    		ret=system("mount -t vfat /dev/sdc1 /mnt/usb");
+			if (ret==256)
+    		ret=system("mount -t vfat /dev/sdd1 /mnt/usb");
+	
+			if ( ret== 0)
+			{
+				lk_dispclr();
+				fprintf(stdout, "mass storage mounted\n");
+				lcd::DisplayText(2, 2, "MOUNT SUCCESS", 1);
+				lcd::DisplayText(4, 0, "Press any key to copy database to device", 0);
+
+				lk_getkey();
+				ret=system("cp /mnt/usb/PayCollect.db /mnt/jffs2/");
+				
+				lk_dispclr();
+				sleep(6);
+				
+					if (ret == 0)
+					{
+					lcd::DisplayText(3,2,"Copying Successfull",0);
+					lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+	                lk_getkey();
+
+					lk_dispclr();
+                	lcd::DisplayText(2,2,"Unmounting disk ..",0);
+					ret = system("umount /mnt/usb");
+					lk_dispclr();
+
+						if (ret == 0)
+						{
+						lcd::DisplayText(3,2,"Unmout Successfull",0);
+						}
+						else
+						{
+						lcd::DisplayText(3,2,"Unmounting  Failed....",0);
+		                lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+		                lk_getkey();
+		                }
+		            }
+					else
+					{
+					lcd::DisplayText(3,2,"Copying  Failed....",0);
+	                lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+	                ret = system("umount /mnt/usb");
+	                lk_getkey();
+	                }
+				                
+				return ;
+			}
+			else
+			{
+				lk_dispclr();
+				fprintf(stderr, "Mass storage mounting Failed \n");
+				lcd::DisplayText(3, 2, "MOUNT FAILED", 1);
+                lcd::DisplayText(5, 0, "Press Any Key to Exit", 0);
+                lk_getkey();
+                return ;
+			}
+
+        }
 }
 
 void Settings()
