@@ -75,6 +75,10 @@ const char* getPosCustomerDisplayName(const klok::pc::Customer& inCustomer)
 {
     return inCustomer.id.c_str();
 }
+const char* getPosTransactionDisplayName(const klok::pc::Transaction& inTransaction)
+{
+    return inTransaction.trans_id.c_str();
+}
 
 std::string getCurrentTime()
 {
@@ -83,7 +87,7 @@ std::string getCurrentTime()
     tm *ltm = localtime(&now);
 
     char buffer[50] = {0};
-    sprintf(buffer, "%04d-%02d-%02d %02d:%02d:%02d", 1900 + ltm->tm_year, 1 + ltm->tm_mon,
+    sprintf(buffer, "%04d.%02d.%02d.%02d.%02d.%02d", 1900 + ltm->tm_year, 1 + ltm->tm_mon,
     ltm->tm_mday,1 + ltm->tm_hour, 1 + ltm->tm_min, 1 + ltm->tm_sec);
 
     return buffer;
@@ -177,7 +181,7 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
             buff.append(gCompanyName);
             buff1.append("");
             buff1.append(gCompanyAddress);
-            buff1.append("\n");
+            buff1.append("\n\n");
             buff2.append("      CASH BILL\n");
             buff3.append("     Bill No             ");
             buff3.append(transId);
@@ -221,7 +225,6 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
 
             ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
             returncheck(ret);
-            prn_paper_feed(1);
 
             ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
             returncheck(ret);
@@ -237,7 +240,7 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
 
             ret = printer::WriteText("\n\n\n", 3, 1);
             returncheck(ret);
-            ret = prn_paper_feed(2);
+            ret = prn_paper_feed(1);
             prn_close();
 
             if(ret == -3)
@@ -559,9 +562,100 @@ void Billing()
     }
 }
 
+void display_transaction_details(const klok::pc::Transaction& inTransaction)
+{
+    lk_dispclr();
+
+    std::string Trans_ID = "Trans No:" + inTransaction.trans_id;
+    lcd::DisplayText(1, 0, Trans_ID.c_str(), 0);
+    printf("%s\n", Trans_ID.c_str());
+
+    std::string Cust_ID = "Cust ID:" + inTransaction.cust_id;
+    lcd::DisplayText(2, 0, Cust_ID.c_str(), 0);
+    printf("%s\n", Cust_ID.c_str());
+
+    lcd::DisplayText(4, 0, "Press Enter to print, else press Cancel", 0);
+
+    int x = lk_getkey();
+    lk_dispclr();
+
+    if(x == klok::pc::KEYS::KEY_ENTER)
+    {
+        return;
+    }
+    else if(x == klok::pc::KEYS::KEY_CANCEL)
+    {
+        printf("pressed cancel while display_customer_details\n");
+        return;
+    }
+}
+
+void getDateWiseDetails(std::string date)
+{
+    std::vector<klok::pc::Transaction> allTransactions;
+    if(klok::pc::Transaction::GetAllFromDatabase(getDatabase(), allTransactions, 10) == 0)
+    {
+    	std::string transDate = "Transactions on" + date;
+    	lcd::DisplayText(2, 0, transDate.c_str(), 0);
+
+        for(int i = 0; i != allTransactions.size(); i++)
+        {
+            printf("Transaction No :%s\n", allTransactions[i].trans_id.c_str());
+            printf("Customer Id :%s\n", allTransactions[i].cust_id.c_str());
+        }
+
+        klok::pc::MenuResult res;
+        res.wasCancelled = false;
+        res.selectedIndex = -1;
+
+        klok::pc::display_sub_range(allTransactions, 4, res, &getPosTransactionDisplayName);
+
+        if(!res.wasCancelled)
+        {
+            display_transaction_details(allTransactions[res.selectedIndex]);
+        }
+    }
+    else
+    {
+        printf("failed to GetAllFromDatabase -> getCustomerDetails \n");
+    }
+}
+
 void DailyCollectionReport()
 {
     printf("DailyCollectionReport Activity\n");
+
+
+    int res = 0;
+
+	lk_dispclr();
+    lcd::DisplayText(1, 0, "Enter Date ", 0);
+    lcd::DisplayText(3, 0, "Format : YYYY.MM.DD ", 0);
+
+    char date[21] = {0};
+    res = lk_getalpha(4, 0, (unsigned char*)date, 21, strlen(date), 0);
+
+    if(res > 0)
+    {
+        date[res] = '\0';
+
+        printf("Transactions on %s %d\n", date, res);
+
+        klok::pc::Transaction transObj;
+        if(klok::pc::Transaction::FromDatabase(getDatabase(), date, transObj) != 0)
+        {
+            printf("No Transaction on : %s\n", date);
+            return;
+        }
+
+        if(transObj.date_time == date)
+        {
+
+            lk_dispclr();
+            getDateWiseDetails(date);
+             
+        }
+    }   
 }
 
 void ConsolidatedReport()
@@ -1105,16 +1199,11 @@ int main(int argc, const char* argv[])
     strcpy(menu.title, "Login");
 
     lk_bkl_timeout(20);
-    lk_dispclr();
-    lcd::DisplayText(1, 0, "1.User Menu ", 0);
-    lcd::DisplayText(4, 0, "Press any key", 0);
-    lk_getkey();
 
     int res = 0;
 
     while(1)
     {
-        lk_dispclr();
         lcd::DisplayText(2, 0, "Enter Username", 0);
 
         char user[10] = {0};
