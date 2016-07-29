@@ -25,6 +25,7 @@ endif()
 
 set(CMAKE_C_COMPILER $ENV{VISIONTEK_CC})
 set(CMAKE_CXX_COMPILER $ENV{VISIONTEK_CXX})
+set(CMAKE_BUILD_TYPE MinSizeRel)
 
 # Define useful variables to handle OS differences:
 if (WIN32)

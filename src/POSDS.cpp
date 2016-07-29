@@ -378,6 +378,66 @@ namespace klok
 
             return 0;
         }
+        int32_t Transaction::GetTransactionsForDate(SQLite::Database& db, std::vector<Transaction>& outTransactions, const char * date, uint32_t maxToRead)
+        {
+
+        	 try
+            {
+                std::string finalQuery = Transaction::Queries::GET_ALL_DATES;
+
+				finalQuery +="'";
+				finalQuery +=date;
+				finalQuery +="%%";
+				finalQuery +="'";
+				SQLite::Statement query(db, finalQuery.c_str());
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    Transaction outTransaction;
+                    outTransaction.trans_id  = query.getColumn(0).getString();
+                    outTransaction.cust_id   = query.getColumn(1).getString();
+                    outTransaction.user_id   = query.getColumn(2).getString();
+                    outTransaction.gross_amt = query.getColumn(3).getString();
+                    outTransaction.add_less  = query.getColumn(4).getString();
+                    outTransaction.net_amt   = query.getColumn(5).getString();
+                    outTransaction.date_time = query.getColumn(6).getString();
+                    outTransactions.push_back(outTransaction);
+                }
+
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Transaction::GetTransactionsForDate -> Fatal Error query :%s\n %s\n", Transaction::Queries::GET_ALL_DATES, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+        int32_t Transaction::ListUniqueDates(SQLite::Database& db, std::vector<std::string>& dates_unique, uint32_t maxToRead)
+        {
+        	try
+            {
+                SQLite::Statement query(db, Transaction::Queries::LIST_ALL_DATES);
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    dates_unique.push_back(query.getColumn(6).getString());
+                }
+
+                return 0;
+
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Transaction::⁠⁠⁠ListUniqueDates -> Fatal Error query :%s\n %s\n", Transaction::Queries::LIST_ALL_DATES, e.what());
+                return -1;
+            }
+
+            return 0;
+
+        }
 
         const char * User::Queries::GET_NEXT_TRANS_ID_FOR_USER = "select MAX(Trans_ID)+1 as Next_ID from pay_coll_trans where User_ID=?";
         const char * User::Queries::TABLE_NAME = "pay_coll_user";
@@ -411,6 +471,8 @@ namespace klok
         const char * Customer::Queries::DROP_CUSTOMER_TABLE_QUERY = "DROP TABLE pay_coll_cust IF EXISTS;";
 
         const char * Transaction::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_trans";
+        const char * Transaction::Queries::GET_ALL_DATES = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE ";
+        const char * Transaction::Queries::LIST_ALL_DATES = "SELECT DISTINCT substr(Date_Time,0,12) as uniq_date FROM pay_coll_trans WHERE Date_Time LIKE ' ____-__-__%'";
         const char * Transaction::Queries::TABLE_NAME = "pay_coll_trans";
         const char * Transaction::Queries::SELECT_TRANSACTION_WITH_ID_FROM_TABLE = "SELECT * FROM pay_coll_trans WHERE Trans_ID=?";
         const char * Transaction::Queries::CREATE_TRANSACTION_TABLE_QUERY =

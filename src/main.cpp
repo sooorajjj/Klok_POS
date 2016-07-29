@@ -79,6 +79,11 @@ const char* getPosTransactionDisplayName(const klok::pc::Transaction& inTransact
 {
     return inTransaction.trans_id.c_str();
 }
+const char* getPosTransactionDatesDisplayName(const std::string & inDate)
+{
+    return inDate.c_str();
+}
+
 
 std::string getCurrentTime()
 {
@@ -87,7 +92,7 @@ std::string getCurrentTime()
     tm *ltm = localtime(&now);
 
     char buffer[50] = {0};
-    sprintf(buffer, "%04d.%02d.%02d.%02d.%02d.%02d", 1900 + ltm->tm_year, 1 + ltm->tm_mon,
+    sprintf(buffer, "%04d-%02d-%02d %02d:%02d:%02d", 1900 + ltm->tm_year, 1 + ltm->tm_mon,
     ltm->tm_mday,1 + ltm->tm_hour, 1 + ltm->tm_min, 1 + ltm->tm_sec);
 
     return buffer;
@@ -574,6 +579,10 @@ void display_transaction_details(const klok::pc::Transaction& inTransaction)
     lcd::DisplayText(2, 0, Cust_ID.c_str(), 0);
     printf("%s\n", Cust_ID.c_str());
 
+    std::string Cur_Amt = "Amount:" + inTransaction.gross_amt;
+    lcd::DisplayText(3, 0, Cur_Amt.c_str(), 0);
+    printf("%s\n", Cur_Amt.c_str());
+
     lcd::DisplayText(4, 0, "Press Enter to print, else press Cancel", 0);
 
     int x = lk_getkey();
@@ -585,7 +594,7 @@ void display_transaction_details(const klok::pc::Transaction& inTransaction)
     }
     else if(x == klok::pc::KEYS::KEY_CANCEL)
     {
-        printf("pressed cancel while display_customer_details\n");
+        printf("pressed cancel while display_transaction_details\n");
         return;
     }
 }
@@ -593,10 +602,9 @@ void display_transaction_details(const klok::pc::Transaction& inTransaction)
 void getDateWiseDetails(std::string date)
 {
     std::vector<klok::pc::Transaction> allTransactions;
-    if(klok::pc::Transaction::GetAllFromDatabase(getDatabase(), allTransactions, 10) == 0)
+    if(klok::pc::Transaction::GetTransactionsForDate(getDatabase(), allTransactions, date.c_str(), 20) == 0)
     {
-    	std::string transDate = "Transactions on" + date;
-    	lcd::DisplayText(2, 0, transDate.c_str(), 0);
+    	std::string transDate = "on " + date;
 
         for(int i = 0; i != allTransactions.size(); i++)
         {
@@ -608,7 +616,7 @@ void getDateWiseDetails(std::string date)
         res.wasCancelled = false;
         res.selectedIndex = -1;
 
-        klok::pc::display_sub_range(allTransactions, 4, res, &getPosTransactionDisplayName);
+        klok::pc::display_sub_range_with_title(allTransactions, transDate.c_str(), 5, res, &getPosTransactionDisplayName);
 
         if(!res.wasCancelled)
         {
@@ -617,7 +625,67 @@ void getDateWiseDetails(std::string date)
     }
     else
     {
-        printf("failed to GetAllFromDatabase -> getCustomerDetails \n");
+        printf("failed to GetTransactionsForDate -> getDateWiseDetails \n");
+    }
+}
+
+void EnteringDate(){
+
+	int res = 0;
+
+	lk_dispclr();
+    lcd::DisplayText(1, 0, "Enter Date ", 0);
+    lcd::DisplayText(3, 0, "Format : YYYY.MM.DD ", 0);
+
+    char typedBuffer[12] = {0};
+    res = lk_getalpha(4, 0, (unsigned char*)typedBuffer, 12, strlen(typedBuffer), 0);
+
+    std::string asString = typedBuffer;
+    for(int i = 0; i < asString.size(); i++)
+    {
+    	if (asString[i]=='.')
+    	{
+    		asString[i] = '-';
+    	}
+    }
+    if(res > 0)
+    {
+
+        printf("Transactions on %s %d\n", asString.c_str(), res);
+
+        std::vector<klok::pc::Transaction> transObj;
+        if(klok::pc::Transaction::GetTransactionsForDate(getDatabase(), transObj, asString.c_str(), 20)==0)
+        {
+        	getDateWiseDetails(asString);            
+        }
+    }
+}
+
+void ListDates()
+{
+	std::vector<std::string> datesUnique;
+    if(klok::pc::Transaction::ListUniqueDates(getDatabase(), datesUnique, 20) == 0)
+    {
+    	for(int i = 0; i != datesUnique.size(); i++)
+        {
+
+            printf("Transaction No :%s\n", datesUnique[i].c_str());
+        }
+
+        klok::pc::MenuResult res;
+        res.wasCancelled = false;
+        res.selectedIndex = -1;
+
+        klok::pc::display_sub_range(datesUnique, 5, res, &getPosTransactionDatesDisplayName);
+
+        if(!res.wasCancelled)
+        {
+            getDateWiseDetails(datesUnique[res.selectedIndex]);
+        }
+    }
+    else
+    {
+        printf("failed to ListUniqueDates -> ListDates \n");
     }
 }
 
@@ -625,37 +693,46 @@ void DailyCollectionReport()
 {
     printf("DailyCollectionReport Activity\n");
 
+    MENU_T menu;
+    int opt = 0;
+    int selItem = 0;
+    int acceptKbdEvents = 0;
 
-    int res = 0;
-
-	lk_dispclr();
-    lcd::DisplayText(1, 0, "Enter Date ", 0);
-    lcd::DisplayText(3, 0, "Format : YYYY.MM.DD ", 0);
-
-    char date[21] = {0};
-    res = lk_getalpha(4, 0, (unsigned char*)date, 21, strlen(date), 0);
-
-    if(res > 0)
+    while(1)
     {
-        date[res] = '\0';
+        lk_dispclr();
 
-        printf("Transactions on %s %d\n", date, res);
+        menu.start = 0;
+        menu.maxEntries = 2;
+        strcpy(menu.menu[0],"By Entering Date");
+        strcpy(menu.menu[1],"List Dates");
 
-        klok::pc::Transaction transObj;
-        if(klok::pc::Transaction::FromDatabase(getDatabase(), date, transObj) != 0)
+        while(1)
         {
-            printf("No Transaction on : %s\n", date);
-            return;
-        }
-
-        if(transObj.date_time == date)
-        {
-
             lk_dispclr();
-            getDateWiseDetails(date);
-             
+
+            opt = scroll_menu(&menu, &selItem, acceptKbdEvents);
+
+            switch(opt)
+            {
+            case CANCEL:
+                return;
+
+            case ENTER:
+                switch(selItem + 1)
+                {
+                case 1:
+                    EnteringDate();
+                    break;
+
+                case 2:
+                    ListDates();
+                    break;
+                }
+                break;
+            }
         }
-    }   
+    }      
 }
 
 void ConsolidatedReport()
