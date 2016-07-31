@@ -788,7 +788,7 @@ void DailyCollectionReport()
                 switch(selItem + 1)
                 {
                 case 1:
-                    EnteringDate();
+                    ListDates();
                     break;
 
                 case 2:
@@ -801,9 +801,172 @@ void DailyCollectionReport()
     }      
 }
 
+void getMonthWiseDetails(std::string month)
+{
+    std::vector<klok::pc::Transaction> allTransactions;
+    if(klok::pc::Transaction::GetTransactionsForMonth(getDatabase(), allTransactions, month.c_str(), 20) == 0)
+    {
+    	std::string transmonth = "on " + month;
+
+        for(int i = 0; i != allTransactions.size(); i++)
+        {
+            printf("Transaction No :%s\n", allTransactions[i].trans_id.c_str());
+            printf("Customer Id :%s\n", allTransactions[i].cust_id.c_str());
+        }
+
+        klok::pc::MenuResult res;
+        res.wasCancelled = false;
+        res.selectedIndex = -1;
+
+        klok::pc::display_sub_range_with_title(allTransactions, transmonth.c_str(), 5, res, &getPosTransactionDisplayName);
+
+        if(!res.wasCancelled)
+        {
+            display_transaction_details(allTransactions[res.selectedIndex]);
+        }
+    }
+    else
+    {
+        printf("failed to GetTransactionsForMonth -> getMonthWiseDetails \n");
+    }
+}
+
+void ListMonths()
+{
+	std::vector<std::string> monthsUnique;
+    if(klok::pc::Transaction::ListUniqueMonths(getDatabase(), monthsUnique, 20) == 0)
+    {
+    	for(int i = 0; i != monthsUnique.size(); i++)
+        {
+
+            printf("Transaction No :%s\n", monthsUnique[i].c_str());
+        }
+
+        klok::pc::MenuResult res;
+        res.wasCancelled = false;
+        res.selectedIndex = -1;
+
+        klok::pc::display_sub_range(monthsUnique, 5, res, &getPosTransactionDatesDisplayName);
+
+        if(!res.wasCancelled)
+        {
+            getMonthWiseDetails(monthsUnique[res.selectedIndex]);
+        }
+    }
+    else
+    {
+        printf("failed to ListUniqueMonths -> ListMonths \n");
+    }
+}
+
+void getYearWiseDetails(std::string year)
+{
+    std::vector<klok::pc::Transaction> allTransactions;
+    if(klok::pc::Transaction::GetTransactionsForYear(getDatabase(), allTransactions, year.c_str(), 20) == 0)
+    {
+    	std::string transyear = "on " + year;
+
+        for(int i = 0; i != allTransactions.size(); i++)
+        {
+            printf("Transaction No :%s\n", allTransactions[i].trans_id.c_str());
+            printf("Customer Id :%s\n", allTransactions[i].cust_id.c_str());
+        }
+
+        klok::pc::MenuResult res;
+        res.wasCancelled = false;
+        res.selectedIndex = -1;
+
+        klok::pc::display_sub_range_with_title(allTransactions, transyear.c_str(), 5, res, &getPosTransactionDisplayName);
+
+        if(!res.wasCancelled)
+        {
+            display_transaction_details(allTransactions[res.selectedIndex]);
+        }
+    }
+    else
+    {
+        printf("failed to GetTransactionsForYear -> getYearWiseDetails \n");
+    }
+}
+
+void ListYears()
+{
+	std::vector<std::string> yearsUnique;
+    if(klok::pc::Transaction::ListUniqueYears(getDatabase(), yearsUnique, 20) == 0)
+    {
+    	for(int i = 0; i !=yearsUnique.size(); i++)
+        {
+
+            printf("Transaction No :%s\n", yearsUnique[i].c_str());
+        }
+
+        klok::pc::MenuResult res;
+        res.wasCancelled = false;
+        res.selectedIndex = -1;
+
+        klok::pc::display_sub_range(yearsUnique, 5, res, &getPosTransactionDatesDisplayName);
+
+        if(!res.wasCancelled)
+        {
+            getYearWiseDetails(yearsUnique[res.selectedIndex]);
+        }
+    }
+    else
+    {
+        printf("failed to ListUniqueYears -> ListYears \n");
+    }
+}
+
 void ConsolidatedReport()
 {
     printf("ConsolidatedReport Activity\n");
+
+    MENU_T menu;
+    int opt = 0;
+    int selItem = 0;
+    int acceptKbdEvents = 0;
+
+    while(1)
+    {
+        lk_dispclr();
+
+        menu.start = 0;
+        menu.maxEntries = 3;
+        strcpy(menu.menu[0],"Daily");
+        strcpy(menu.menu[1],"Monthly");
+        strcpy(menu.menu[2],"Yearly");
+
+
+        while(1)
+        {
+            lk_dispclr();
+
+            opt = scroll_menu(&menu, &selItem, acceptKbdEvents);
+
+            switch(opt)
+            {
+            case CANCEL:
+                return;
+
+            case ENTER:
+                switch(selItem + 1)
+                {
+                case 1:
+                    ListDates();
+                    break;
+
+                case 2:
+                    ListMonths();
+                    break;
+
+                case 3:
+                    ListYears();
+                    break;
+                }
+                break;
+            }
+        }
+    }
 }
 
 void CustomerWiseReport()

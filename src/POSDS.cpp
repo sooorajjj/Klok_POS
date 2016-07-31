@@ -435,6 +435,120 @@ namespace klok
 
         }
 
+        int32_t Transaction::GetTransactionsForMonth(SQLite::Database& db, std::vector<Transaction>& outTransactions, const char * month, uint32_t maxToRead)
+        {
+
+        	 try
+            {
+				SQLite::Statement query(db, Transaction::Queries::GET_ALL_FOR_MONTH);
+				query.bind(1, month);
+
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    Transaction outTransaction;
+                    outTransaction.trans_id  = query.getColumn(0).getString();
+                    outTransaction.cust_id   = query.getColumn(1).getString();
+                    outTransaction.user_id   = query.getColumn(2).getString();
+                    outTransaction.gross_amt = query.getColumn(3).getString();
+                    outTransaction.add_less  = query.getColumn(4).getString();
+                    outTransaction.net_amt   = query.getColumn(5).getString();
+                    outTransaction.date_time = query.getColumn(6).getString();
+                    outTransactions.push_back(outTransaction);
+                }
+
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Transaction::GetTransactionsForMonth -> Fatal Error query :%s\n %s\n", Transaction::Queries::GET_ALL_FOR_MONTH, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+        int32_t Transaction::ListUniqueMonths(SQLite::Database& db, std::vector<std::string>& months_unique, uint32_t maxToRead)
+        {
+        	try
+            {
+                SQLite::Statement query(db, Transaction::Queries::LIST_ALL_MONTHS);
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    months_unique.push_back(query.getColumn(0).getString());
+                }
+
+                return 0;
+
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Transaction::⁠⁠⁠ListUniqueMonths -> Fatal Error query :%s\n %s\n", Transaction::Queries::LIST_ALL_MONTHS, e.what());
+                return -1;
+            }
+
+            return 0;
+
+        }
+
+        int32_t Transaction::GetTransactionsForYear(SQLite::Database& db, std::vector<Transaction>& outTransactions, const char * year, uint32_t maxToRead)
+        {
+
+        	 try
+            {
+				SQLite::Statement query(db, Transaction::Queries::GET_ALL_FOR_YEAR);
+				query.bind(1, year);
+
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    Transaction outTransaction;
+                    outTransaction.trans_id  = query.getColumn(0).getString();
+                    outTransaction.cust_id   = query.getColumn(1).getString();
+                    outTransaction.user_id   = query.getColumn(2).getString();
+                    outTransaction.gross_amt = query.getColumn(3).getString();
+                    outTransaction.add_less  = query.getColumn(4).getString();
+                    outTransaction.net_amt   = query.getColumn(5).getString();
+                    outTransaction.date_time = query.getColumn(6).getString();
+                    outTransactions.push_back(outTransaction);
+                }
+
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Transaction::GetTransactionsForYear -> Fatal Error query :%s\n %s\n", Transaction::Queries::GET_ALL_FOR_YEAR, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+        int32_t Transaction::ListUniqueYears(SQLite::Database& db, std::vector<std::string>& years_unique, uint32_t maxToRead)
+        {
+        	try
+            {
+                SQLite::Statement query(db, Transaction::Queries::LIST_ALL_YEARS);
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    years_unique.push_back(query.getColumn(0).getString());
+                }
+
+                return 0;
+
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Transaction::⁠⁠⁠ListUniqueYears -> Fatal Error query :%s\n %s\n", Transaction::Queries::LIST_ALL_YEARS, e.what());
+                return -1;
+            }
+
+            return 0;
+
+        }
+
         const char * User::Queries::GET_NEXT_TRANS_ID_FOR_USER = "select MAX(Trans_ID)+1 as Next_ID from pay_coll_trans where User_ID=?";
         const char * User::Queries::TABLE_NAME = "pay_coll_user";
         const char * User::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_user";
@@ -467,8 +581,12 @@ namespace klok
         const char * Customer::Queries::DROP_CUSTOMER_TABLE_QUERY = "DROP TABLE pay_coll_cust IF EXISTS;";
 
         const char * Transaction::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_trans";
-        const char * Transaction::Queries::GET_ALL_FOR_DATE = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE || '\%'";
+        const char * Transaction::Queries::GET_ALL_FOR_DATE = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE ? || '\%'";
         const char * Transaction::Queries::LIST_ALL_DATES = "select  distinct substr(Date_Time,0,11) from pay_coll_trans where  Date_Time like '____-__-__\%'";
+        const char * Transaction::Queries::GET_ALL_FOR_MONTH = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE ? || '\%'";
+        const char * Transaction::Queries::LIST_ALL_MONTHS = "select  distinct substr(Date_Time,0,9) from pay_coll_trans where  Date_Time like '____-__-\%'";
+        const char * Transaction::Queries::GET_ALL_FOR_YEAR = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE ? || '\%'";
+        const char * Transaction::Queries::LIST_ALL_YEARS = "select  distinct substr(Date_Time,0,6) from pay_coll_trans where  Date_Time like '____-\%'";
         const char * Transaction::Queries::TABLE_NAME = "pay_coll_trans";
         const char * Transaction::Queries::SELECT_TRANSACTION_WITH_ID_FROM_TABLE = "SELECT * FROM pay_coll_trans WHERE Trans_ID=?";
         const char * Transaction::Queries::CREATE_TRANSACTION_TABLE_QUERY =
