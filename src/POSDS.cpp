@@ -383,13 +383,9 @@ namespace klok
 
         	 try
             {
-                std::string finalQuery = Transaction::Queries::GET_ALL_DATES;
+				SQLite::Statement query(db, Transaction::Queries::GET_ALL_FOR_DATE);
+				query.bind(1, date);
 
-				finalQuery +="'";
-				finalQuery +=date;
-				finalQuery +="%%";
-				finalQuery +="'";
-				SQLite::Statement query(db, finalQuery.c_str());
 
                 while(query.executeStep() && (maxToRead--))
                 {
@@ -408,7 +404,7 @@ namespace klok
             }
             catch(std::exception& e)
             {
-                std::printf("Transaction::GetTransactionsForDate -> Fatal Error query :%s\n %s\n", Transaction::Queries::GET_ALL_DATES, e.what());
+                std::printf("Transaction::GetTransactionsForDate -> Fatal Error query :%s\n %s\n", Transaction::Queries::GET_ALL_FOR_DATE, e.what());
                 return -1;
             }
 
@@ -423,7 +419,7 @@ namespace klok
 
                 while(query.executeStep() && (maxToRead--))
                 {
-                    dates_unique.push_back(query.getColumn(6).getString());
+                    dates_unique.push_back(query.getColumn(0).getString());
                 }
 
                 return 0;
@@ -471,8 +467,8 @@ namespace klok
         const char * Customer::Queries::DROP_CUSTOMER_TABLE_QUERY = "DROP TABLE pay_coll_cust IF EXISTS;";
 
         const char * Transaction::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_trans";
-        const char * Transaction::Queries::GET_ALL_DATES = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE ";
-        const char * Transaction::Queries::LIST_ALL_DATES = "SELECT DISTINCT substr(Date_Time,0,12) as uniq_date FROM pay_coll_trans WHERE Date_Time LIKE ' ____-__-__%'";
+        const char * Transaction::Queries::GET_ALL_FOR_DATE = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE || '\%'";
+        const char * Transaction::Queries::LIST_ALL_DATES = "select  distinct substr(Date_Time,0,11) from pay_coll_trans where  Date_Time like '____-__-__\%'";
         const char * Transaction::Queries::TABLE_NAME = "pay_coll_trans";
         const char * Transaction::Queries::SELECT_TRANSACTION_WITH_ID_FROM_TABLE = "SELECT * FROM pay_coll_trans WHERE Trans_ID=?";
         const char * Transaction::Queries::CREATE_TRANSACTION_TABLE_QUERY =

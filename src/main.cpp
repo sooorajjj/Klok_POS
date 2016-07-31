@@ -579,7 +579,7 @@ void display_transaction_details(const klok::pc::Transaction& inTransaction)
     lcd::DisplayText(2, 0, Cust_ID.c_str(), 0);
     printf("%s\n", Cust_ID.c_str());
 
-    std::string Cur_Amt = "Amount:" + inTransaction.gross_amt;
+    std::string Cur_Amt = "Amount:" + inTransaction.net_amt;
     lcd::DisplayText(3, 0, Cur_Amt.c_str(), 0);
     printf("%s\n", Cur_Amt.c_str());
 
@@ -590,7 +590,73 @@ void display_transaction_details(const klok::pc::Transaction& inTransaction)
 
     if(x == klok::pc::KEYS::KEY_ENTER)
     {
-        return;
+    	std::string buff, buff1, buff2, buff3;
+
+            prn_open();
+            if(prn_paperstatus() != 0)
+            {
+                lk_dispclr();
+                lcd::DisplayText(3, 5, "No Paper !", 1);
+                lk_getkey();
+                return;
+            }
+
+            buff.append("DailyCollectionReport\n");
+            buff1.append("    Bill No          ");
+            buff1.append(inTransaction.trans_id);
+            buff1.append("\n");
+            buff1.append("    ID               ");
+            buff1.append(inTransaction.cust_id);
+            buff1.append("\n");
+            buff1.append("    DATE AND TIME    ");
+            buff1.append(inTransaction.date_time);
+            buff1.append("\n");
+            buff1.append("    Gross Amount     ");
+            buff1.append(inTransaction.gross_amt);
+            buff1.append("\n");
+            buff1.append("    Add/Less         ");
+            buff1.append(inTransaction.add_less);
+            buff1.append("\n");
+            buff1.append("     -------------------------------\n");
+            buff2.append("  CASH       ");
+            buff2.append(inTransaction.net_amt);
+            buff2.append("\n");
+            buff3.append("    Billing User ID     ");
+            buff3.append(inTransaction.user_id);
+            buff3.append("\n");
+            buff3.append("     -------------------------------\n");
+            buff3.append("          THANK YOU VISIT AGAIN\n");
+
+            lk_dispclr();
+            lcd::DisplayText(3, 5, "PRINTING Report", 1);
+
+            int ret;
+
+            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+            returncheck(ret);
+
+            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+            returncheck(ret);
+
+            ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
+            returncheck(ret);
+
+            ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+            returncheck(ret);
+
+            ret = printer::WriteText("\n\n\n", 3, 1);
+            returncheck(ret);
+            ret = prn_paper_feed(1);
+            prn_close();
+
+            if(ret == -3)
+            {
+                printf("out of the paper");
+            }
+            else
+            {
+                return;
+            }
     }
     else if(x == klok::pc::KEYS::KEY_CANCEL)
     {

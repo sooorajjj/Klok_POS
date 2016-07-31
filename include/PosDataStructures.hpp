@@ -91,7 +91,7 @@ namespace klok
             {
                 static const char* TABLE_NAME;
                 static const char* GET_ALL_QUERY;
-                static const char* GET_ALL_DATES;
+                static const char* GET_ALL_FOR_DATE;
                 static const char* LIST_ALL_DATES;
                 static const char* INSERT_INTO_TABLE;
                 static const char* CREATE_TRANSACTION_TABLE_QUERY;
