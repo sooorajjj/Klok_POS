@@ -414,24 +414,7 @@ void display_customer_details(const klok::pc::Customer& inCustomer)
 
     if(x == klok::pc::KEYS::KEY_ENTER)
     {
-        int res = 0;
-        char grossAmt[10] = {0};
 
-        lcd::DisplayText(1, 0, "Gross Amount", 0);
-        res = lk_getnumeric(4, 0, (unsigned char*)grossAmt, 10, strlen(grossAmt));
-        float scanned =0;
-
-        if(sscanf(grossAmt, "%f", &scanned) == 1 && res > 0)
-        {
-            add_less(scanned);
-            lcd::DisplayText(4, 0, "Press Enter once data have been confirmed", 0);
-        }
-        else
-        {
-            lk_dispclr();
-            lcd::DisplayText(4, 0, "Enter correct Amt", 0);
-            lk_getkey();
-        }
     }
     else if(x == klok::pc::KEYS::KEY_CANCEL)
     {
@@ -601,7 +584,7 @@ void display_transaction_details(const klok::pc::Transaction& inTransaction)
                 return;
             }
 
-            buff.append("DailyCollectionReport\n");
+            buff.append("   Daily Report\n\n");
             buff1.append("    Bill No          ");
             buff1.append(inTransaction.trans_id);
             buff1.append("\n");
@@ -788,7 +771,7 @@ void DailyCollectionReport()
                 switch(selItem + 1)
                 {
                 case 1:
-                    ListDates();
+                    EnteringDate();
                     break;
 
                 case 2:
@@ -968,10 +951,65 @@ void ConsolidatedReport()
         }
     }
 }
+void display_customer_report(const klok::pc::Customer& inCustomer)
+{
+    lk_dispclr();
+
+    std::string Cust_Name = "Name :" + inCustomer.name;
+    lcd::DisplayText(1, 0, Cust_Name.c_str(), 0);
+    printf("%s\n", Cust_Name.c_str());
+
+    std::string Cust_Bal = "Balance Amt:" + inCustomer.cur_amt;
+    lcd::DisplayText(2, 0, Cust_Bal.c_str(), 0);
+    printf("%s\n", Cust_Bal.c_str());
+
+    gCustomerName = inCustomer.name;
+    gCustomerBalance = inCustomer.cur_amt;
+    gCustomerContact = inCustomer.contact;
+    lcd::DisplayText(4, 0, "Press Enter once data have been confirmed", 0);
+
+    int x = lk_getkey();
+    lk_dispclr();
+
+    if(x == klok::pc::KEYS::KEY_ENTER)
+    {
+        printf("pressed enter while display_customer_details\n");
+
+    }
+    else if(x == klok::pc::KEYS::KEY_CANCEL)
+    {
+        printf("pressed cancel while display_customer_details\n");
+    }
+}
+
 
 void CustomerWiseReport()
 {
-    printf("CustomerWiseReport Activity\n");
+	std::vector<klok::pc::Customer> allCustomers;
+    if(klok::pc::Customer::GetAllFromDatabase(getDatabase(), allCustomers, 10) == 0)
+    {
+        for(int i = 0; i != allCustomers.size(); i++)
+        {
+            printf("CustomerId :%s\n", allCustomers[i].id.c_str());
+            printf("CustomerName :%s\n", allCustomers[i].name.c_str());
+        }
+
+        klok::pc::MenuResult res;
+        res.wasCancelled = false;
+        res.selectedIndex = -1;
+
+        klok::pc::display_sub_range(allCustomers, 4, res, &getPosCustomerDisplayName);
+
+        if(!res.wasCancelled)
+        {
+            gCustomerId = allCustomers[res.selectedIndex].id;
+            display_customer_report(allCustomers[res.selectedIndex]);
+        }
+    }
+    else
+    {
+        printf("failed to GetAllFromDatabase -> getCustomerDetails \n");
+    }
 }
 
 void Reports()
