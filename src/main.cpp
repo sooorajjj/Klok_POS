@@ -414,6 +414,24 @@ void display_customer_details(const klok::pc::Customer& inCustomer)
 
     if(x == klok::pc::KEYS::KEY_ENTER)
     {
+    	int res = 0;
+        char grossAmt[10] = {0};
+
+        lcd::DisplayText(1, 0, "Gross Amount", 0);
+        res = lk_getnumeric(4, 0, (unsigned char*)grossAmt, 10, strlen(grossAmt));
+        float scanned =0;
+
+        if(sscanf(grossAmt, "%f", &scanned) == 1 && res > 0)
+        {
+            add_less(scanned);
+            lcd::DisplayText(4, 0, "Press Enter once data have been confirmed", 0);
+        }
+        else
+        {
+            lk_dispclr();
+            lcd::DisplayText(4, 0, "Enter correct Amt", 0);
+            lk_getkey();
+        }
 
     }
     else if(x == klok::pc::KEYS::KEY_CANCEL)
@@ -776,7 +794,7 @@ void DailyCollectionReport()
 
                 case 2:
                     ListDates();
-                    break;
+                    break; 
                 }
                 break;
             }
