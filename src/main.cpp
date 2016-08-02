@@ -1081,68 +1081,7 @@ void Reports()
     }
 }
 
-void Customer()
-{
-    printf("Customer Activity\n");
-}
-
-void Item()
-{
-    printf("Item Activity\n");
-}
-
-void Master()
-{
-    printf("Master\n");
-
-    MENU_T menu;
-    int opt = 0;
-    int selItem = 0;
-    int acceptKbdEvents = 0;
-
-    while(1)
-    {
-        lk_dispclr();
-
-        menu.start = 0;
-        menu.maxEntries = 2;
-        strcpy(menu.menu[0],"Customer");
-        strcpy(menu.menu[1],"Item");
-
-        while(1)
-        {
-            lk_dispclr();
-
-            opt = scroll_menu(&menu, &selItem, acceptKbdEvents);
-
-            switch(opt)
-            {
-            case CANCEL:
-                return;
-
-            case ENTER:
-                switch(selItem + 1)
-                {
-                case 1:
-                    Customer();
-                    break;
-
-                case 2:
-                    Item();
-                    break;
-                }
-                break;
-            }
-        }
-    }
-}
-
-void UserRights()
-{
-    printf("UserRights Activity\n");
-}
-
-void Download()
+void Export()
 {
 	lk_dispclr();
 	lcd::DisplayText(2, 0, "Insert the usb device and press ENTER", 0);
@@ -1279,7 +1218,7 @@ void Download()
         }
 }
 
-void Upload()
+void Import()
 {
 	lk_dispclr();
 	lcd::DisplayText(2, 0, "Insert the usb device and press ENTER", 0);
@@ -1429,10 +1368,9 @@ void Settings()
         lk_dispclr();
 
         menu.start = 0;
-        menu.maxEntries = 3;
-        strcpy(menu.menu[0],"User Rights" );
-        strcpy(menu.menu[1],"Download");
-        strcpy(menu.menu[2],"Upload");
+        menu.maxEntries = 2;
+        strcpy(menu.menu[0],"Export");
+        strcpy(menu.menu[1],"Import");
 
         while(1)
         {
@@ -1449,15 +1387,11 @@ void Settings()
                 switch(selItem + 1)
                 {
                 case 1:
-                    UserRights();
+                    Export();
                     break;
 
                 case 2:
-                    Download();
-                    break;
-
-                case 3:
-                    Upload();
+                    Import();
                     break;
                 }
                 break;
@@ -1477,11 +1411,10 @@ void main_menu(const char* user, const char* pwd)
         lk_dispclr();
 
         menu.start = 0;
-        menu.maxEntries = 4;
+        menu.maxEntries = 3;
         strcpy(menu.menu[0],"Billing");
         strcpy(menu.menu[1],"Reports");
-        strcpy(menu.menu[2],"Master");
-        strcpy(menu.menu[3],"Settings");
+        strcpy(menu.menu[2],"Settings");
 
         while(1)
         {
@@ -1506,10 +1439,6 @@ void main_menu(const char* user, const char* pwd)
                     break;
 
                 case 3:
-                    Master();
-                    break;
-
-                case 4:
                     Settings();
                     break;
                 }
