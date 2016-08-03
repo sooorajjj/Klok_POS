@@ -89,6 +89,8 @@ namespace klok
             static int32_t ListUniqueMonths(SQLite::Database& db, std::vector<std::string>& months_unique, uint32_t maxToRead);
             static int32_t GetTransactionsForYear(SQLite::Database& db, std::vector<Transaction>& outTransactions, const char * year, uint32_t maxToRead);
             static int32_t ListUniqueYears(SQLite::Database& db, std::vector<std::string>& years_unique, uint32_t maxToRead);
+            static int32_t GetTransactionsForCustomer(SQLite::Database& db, std::vector<Transaction>& outTransactions, const char * customer, uint32_t maxToRead);
+            static int32_t ListUniqueCustomers(SQLite::Database& db, std::vector<std::string>& customers_unique, uint32_t maxToRead);
             static int32_t InsertIntoTable(SQLite::Database& db, const Transaction& toInsert);
 
             struct Queries
@@ -101,6 +103,8 @@ namespace klok
                 static const char* LIST_ALL_MONTHS;
                 static const char* GET_ALL_FOR_YEAR;
                 static const char* LIST_ALL_YEARS;
+                static const char* GET_ALL_FOR_CUSTOMER;
+                static const char* LIST_ALL_CUSTOMERS;
                 static const char* INSERT_INTO_TABLE;
                 static const char* CREATE_TRANSACTION_TABLE_QUERY;
                 static const char* DROP_TRANSACTION_TABLE_QUERY;

@@ -570,7 +570,7 @@ void getDateWiseDetails(std::string date)
     std::vector<klok::pc::Transaction> allTransactions;
     if(klok::pc::Transaction::GetTransactionsForDate(getDatabase(), allTransactions, date.c_str(), 20) == 0)
     {
-    	std::string transDate = "  Report on " + date;
+    	std::string transDate = " Report on " + date;
         prn_open();
         std::string buff;
 
@@ -764,7 +764,7 @@ void getMonthWiseDetails(std::string month)
     std::vector<klok::pc::Transaction> allTransactions;
     if(klok::pc::Transaction::GetTransactionsForMonth(getDatabase(), allTransactions, month.c_str(), 20) == 0)
     {
-    	std::string transMonth = "   Report on " + month;
+    	std::string transMonth = "  Report on " + month;
         prn_open();
         std::string buff;
 
@@ -796,6 +796,7 @@ void getMonthWiseDetails(std::string month)
         {
             printf("Transaction No :%s\n", allTransactions[i].trans_id.c_str());
             printf("Customer Id :%s\n", allTransactions[i].cust_id.c_str());
+            
             std::string buff1;
 
             buff1.append("    Bill No          ");
@@ -877,7 +878,7 @@ void getYearWiseDetails(std::string year)
     std::vector<klok::pc::Transaction> allTransactions;
     if(klok::pc::Transaction::GetTransactionsForYear(getDatabase(), allTransactions, year.c_str(), 20) == 0)
     {
-    	std::string transYear = "    Report on " + year;
+    	std::string transYear = "   Report on " + year;
         prn_open();
         std::string buff;
 
@@ -910,7 +911,7 @@ void getYearWiseDetails(std::string year)
             printf("Transaction No :%s\n", allTransactions[i].trans_id.c_str());
             printf("Customer Id :%s\n", allTransactions[i].cust_id.c_str());
             
-        std::string buff1;
+        	std::string buff1;
 
             buff1.append("    Bill No          ");
             buff1.append(allTransactions[i].trans_id);
@@ -1038,27 +1039,102 @@ void ConsolidatedReport()
         }
     }
 }
-void display_customer_report(const klok::pc::Customer& inCustomer)
+
+void getCustomerWiseDetails(std::string customer)
 {
+
     lk_dispclr();
 
-    std::string Cust_Name = "Name :" + inCustomer.name;
-    lcd::DisplayText(1, 0, Cust_Name.c_str(), 0);
-    printf("%s\n", Cust_Name.c_str());
-
-    std::string Cust_Bal = "Balance Amt:" + inCustomer.cur_amt;
-    lcd::DisplayText(2, 0, Cust_Bal.c_str(), 0);
-    printf("%s\n", Cust_Bal.c_str());
-
-    lcd::DisplayText(4, 0, "Press Enter once data have been confirmed", 0);
+	std::string transCustomer = "  Report of " + customer;
+	lcd::DisplayText(1, 0, transCustomer.c_str(), 0);
+    lcd::DisplayText(3, 0, "Press ENTER to print , else press CANCEL", 0);
 
     int x = lk_getkey();
-    lk_dispclr();
 
     if(x == klok::pc::KEYS::KEY_ENTER)
     {
-        printf("pressed enter while display_customer_details\n");
+        std::vector<klok::pc::Transaction> allTransactions;
+	    if(klok::pc::Transaction::GetTransactionsForCustomer(getDatabase(), allTransactions, customer.c_str(), 20) == 0)
+	    {
+	        prn_open();
+	        std::string buff;
 
+	        buff.append(transCustomer);
+	        buff.append("\n\n");
+	        
+	        int ret;
+	        ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+	        if(ret == -3)
+	        {
+		   		while(prn_paperstatus() != 0)
+			    {
+			        lk_dispclr();
+			        lcd::DisplayText(3, 5, "No Paper !", 1);
+			        int x = lk_getkey();
+			        if(x == klok::pc::KEYS::KEY_ENTER && prn_paperstatus() == 0 )
+			        {
+			            if(printer::WriteText(buff.c_str(), buff.size(), 2) != -3)
+			                break;            
+			        }
+			        else if (x == klok::pc::KEYS::KEY_CANCEL) 
+			        {
+			        return;
+			    	}
+			    }
+			}
+
+			for(int i = 0; i != allTransactions.size(); i++)
+	        {
+	            printf("Transaction No :%s\n", allTransactions[i].trans_id.c_str());
+	            printf("Customer Id :%s\n", allTransactions[i].cust_id.c_str());
+
+	            std::string buff1;
+
+	            buff1.append("    Bill No          ");
+	            buff1.append(allTransactions[i].trans_id);
+	            buff1.append("\n");
+	            buff1.append("   User ID            ");
+	            buff1.append(allTransactions[i].user_id);
+	            buff1.append("\n");
+	            buff1.append("    DATE AND TIME    ");
+	            buff1.append(allTransactions[i].date_time);
+	            buff1.append("\n");
+	            buff1.append("     -------------------------------\n");
+	            buff1.append("    CASH             ");
+	            buff1.append(allTransactions[i].net_amt);
+	            buff1.append("\n");
+	            buff1.append("     -------------------------------\n");
+
+	            int ret;
+
+	            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+	            if(ret == -3)
+		        {
+			   		while(prn_paperstatus() != 0)
+				    {
+				        lk_dispclr();
+				        lcd::DisplayText(3, 5, "No Paper !", 1);
+				        int x = lk_getkey();
+				        if(x == klok::pc::KEYS::KEY_ENTER && prn_paperstatus() == 0 )
+				        {
+				            if(printer::WriteText(buff1.c_str(), buff1.size(), 1) != -3)
+				                break;            
+				        }
+				        else if (x == klok::pc::KEYS::KEY_CANCEL) 
+				        {
+				        return;
+				    	}
+				    }
+				}
+	        }
+	        ret = prn_paper_feed(1);
+	        prn_close();
+
+	    }
+        else
+	    {
+	        printf("failed to GetTransactionsForCustomer -> getCustomerWiseDetails \n");
+	    }
     }
     else if(x == klok::pc::KEYS::KEY_CANCEL)
     {
@@ -1069,25 +1145,23 @@ void display_customer_report(const klok::pc::Customer& inCustomer)
 
 void CustomerWiseReport()
 {
-	std::vector<klok::pc::Customer> allCustomers;
-    if(klok::pc::Customer::GetAllFromDatabase(getDatabase(), allCustomers, 10) == 0)
+	std::vector<std::string> customersUnique;
+    if(klok::pc::Transaction::ListUniqueCustomers(getDatabase(), customersUnique, 20) == 0)
     {
-        for(int i = 0; i != allCustomers.size(); i++)
+        for(int i = 0; i != customersUnique.size(); i++)
         {
-            printf("CustomerId :%s\n", allCustomers[i].id.c_str());
-            printf("CustomerName :%s\n", allCustomers[i].name.c_str());
+            printf("Customer Id :%s\n", customersUnique[i].c_str());
         }
 
         klok::pc::MenuResult res;
         res.wasCancelled = false;
         res.selectedIndex = -1;
 
-        klok::pc::display_sub_range(allCustomers, 4, res, &getPosCustomerDisplayName);
+        klok::pc::display_sub_range(customersUnique, 5, res, &getPosTransactionDatesDisplayName);
 
         if(!res.wasCancelled)
         {
-            gCustomerId = allCustomers[res.selectedIndex].id;
-            display_customer_report(allCustomers[res.selectedIndex]);
+            getCustomerWiseDetails(customersUnique[res.selectedIndex]);
         }
     }
     else
