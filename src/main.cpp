@@ -677,18 +677,67 @@ void getDateWiseDetails(std::string date)
         {
             printf("Transaction No :%s\n", allTransactions[i].trans_id.c_str());
             printf("Customer Id :%s\n", allTransactions[i].cust_id.c_str());
+
+            std::string buff, buff1;
+
+            prn_open();
+            if(prn_paperstatus() != 0)
+            {
+                lk_dispclr();
+                lcd::DisplayText(3, 5, "No Paper !", 1);
+                lk_getkey();
+                return;
+            }
+
+            buff.append("   Daily Report\n\n");
+            buff1.append("    Bill No          ");
+            buff1.append(allTransactions[i].trans_id);
+            buff1.append("\n");
+            buff1.append("    ID               ");
+            buff1.append(allTransactions[i].cust_id);
+            buff1.append("\n");
+            buff1.append("    DATE AND TIME    ");
+            buff1.append(allTransactions[i].date_time);
+            buff1.append("\n");
+            buff1.append("     -------------------------------\n");
+            buff1.append("    CASH             ");
+            buff1.append(allTransactions[i].net_amt);
+            buff1.append("\n");
+
+            int ret;
+
+            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+            returncheck(ret);
+
+            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+            returncheck(ret);
+
+            ret = printer::WriteText("\n\n\n", 3, 1);
+            returncheck(ret);
+            ret = prn_paper_feed(1);
+            prn_close();
+
+            if(ret == -3)
+            {
+                printf("out of the paper");
+            }
+            else
+            {
+                return;
+            }
+
         }
 
-        klok::pc::MenuResult res;
-        res.wasCancelled = false;
-        res.selectedIndex = -1;
+        // klok::pc::MenuResult res;
+        // res.wasCancelled = false;
+        // res.selectedIndex = -1;
 
-        klok::pc::display_sub_range_with_title(allTransactions, transDate.c_str(), 5, res, &getPosTransactionDisplayName);
+        // klok::pc::display_sub_range_with_title(allTransactions, transDate.c_str(), 5, res, &getPosTransactionDisplayName);
 
-        if(!res.wasCancelled)
-        {
-            display_transaction_details(allTransactions[res.selectedIndex]);
-        }
+        // if(!res.wasCancelled)
+        // {
+        //     display_transaction_details(allTransactions[res.selectedIndex]);
+        // }
     }
     else
     {
@@ -736,7 +785,7 @@ void ListDates()
     	for(int i = 0; i != datesUnique.size(); i++)
         {
 
-            printf("Transaction No :%s\n", datesUnique[i].c_str());
+            printf("Transaction On :%s\n", datesUnique[i].c_str());
         }
 
         klok::pc::MenuResult res;
@@ -871,7 +920,9 @@ void getYearWiseDetails(std::string year)
         {
             printf("Transaction No :%s\n", allTransactions[i].trans_id.c_str());
             printf("Customer Id :%s\n", allTransactions[i].cust_id.c_str());
+            
         }
+
 
         klok::pc::MenuResult res;
         res.wasCancelled = false;
