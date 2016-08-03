@@ -572,7 +572,7 @@ void getDateWiseDetails(std::string date)
     {
     	std::string transDate = " Report on " + date;
         prn_open();
-        std::string buff;
+        std::string buff, buff1;
 
         buff.append(transDate);
         buff.append("\n\n");
@@ -598,32 +598,35 @@ void getDateWiseDetails(std::string date)
 		    }
 		}
 
+        float totaAmt = 0;
 
         for(int i = 0; i != allTransactions.size(); i++)
         {
             printf("Transaction No :%s\n", allTransactions[i].trans_id.c_str());
             printf("Customer Id :%s\n", allTransactions[i].cust_id.c_str());
 
-            std::string buff1;
+            std::string buff2;
 
-            buff1.append("    Bill No          ");
-            buff1.append(allTransactions[i].trans_id);
-            buff1.append("\n");
-            buff1.append("    ID               ");
-            buff1.append(allTransactions[i].cust_id);
-            buff1.append("\n");
-            buff1.append("    DATE AND TIME    ");
-            buff1.append(allTransactions[i].date_time);
-            buff1.append("\n");
-            buff1.append("     -------------------------------\n");
-            buff1.append("    CASH             ");
-            buff1.append(allTransactions[i].net_amt);
-            buff1.append("\n");
-            buff1.append("     -------------------------------\n");
+            buff2.append("    Bill No          ");
+            buff2.append(allTransactions[i].trans_id);
+            buff2.append("\n");
+            buff2.append("    ID               ");
+            buff2.append(allTransactions[i].cust_id);
+            buff2.append("\n");
+            buff2.append("    DATE AND TIME    ");
+            buff2.append(allTransactions[i].date_time);
+            buff2.append("\n");
+            buff2.append("     -------------------------------\n");
+            buff2.append("    CASH             ");
+            buff2.append(allTransactions[i].net_amt);
+            buff2.append("\n");
+            buff2.append("     -------------------------------\n");
+
+	        sscanf(allTransactions[i].net_amt.c_str(), "%f", &totaAmt);
 
             int ret;
 
-            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+            ret = printer::WriteText(buff2.c_str(), buff2.size(), 1);
             if(ret == -3)
 	        {
 		   		while(prn_paperstatus() != 0)
@@ -643,6 +646,35 @@ void getDateWiseDetails(std::string date)
 			    }
 			}
         }
+		
+		char totaAmtString [30] = {0};
+	    sprintf(totaAmtString, "%0.2f", totaAmt);
+
+        buff1.append("    TOTAL             ");
+        buff1.append(totaAmtString);
+	    buff1.append("\n");
+        buff1.append("     -------------------------------\n");
+
+        ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+        if(ret == -3)
+        {
+	   		while(prn_paperstatus() != 0)
+		    {
+		        lk_dispclr();
+		        lcd::DisplayText(3, 5, "No Paper !", 1);
+		        int x = lk_getkey();
+		        if(x == klok::pc::KEYS::KEY_ENTER && prn_paperstatus() == 0 )
+		        {
+		            if(printer::WriteText(buff1.c_str(), buff1.size(), 1) != -3)
+		                break;            
+		        }
+		        else if (x == klok::pc::KEYS::KEY_CANCEL) 
+		        {
+		        return;
+		    	}
+			}
+		}
+
         ret = prn_paper_feed(1);
         prn_close();
 
@@ -1093,7 +1125,7 @@ void getCustomerWiseDetails(std::string customer)
 	            buff1.append("    Bill No          ");
 	            buff1.append(allTransactions[i].trans_id);
 	            buff1.append("\n");
-	            buff1.append("   User ID            ");
+	            buff1.append("    User ID            ");
 	            buff1.append(allTransactions[i].user_id);
 	            buff1.append("\n");
 	            buff1.append("    DATE AND TIME    ");
