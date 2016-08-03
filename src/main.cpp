@@ -139,12 +139,9 @@ int returncheck(int r)
 
     case 0:
         return 0;
-
-    default:
-        return 0;
     }
 
-    return 0;
+    return -1;
 }
 
 void insertAndPrint(std::string principleAmtString, std::string addLessString, std::string netAmtString,
@@ -568,128 +565,47 @@ void Billing()
     }
 }
 
-void display_transaction_details(const klok::pc::Transaction& inTransaction)
-{
-    lk_dispclr();
-
-    std::string Trans_ID = "Trans No:" + inTransaction.trans_id;
-    lcd::DisplayText(1, 0, Trans_ID.c_str(), 0);
-    printf("%s\n", Trans_ID.c_str());
-
-    std::string Cust_ID = "Cust ID:" + inTransaction.cust_id;
-    lcd::DisplayText(2, 0, Cust_ID.c_str(), 0);
-    printf("%s\n", Cust_ID.c_str());
-
-    std::string Cur_Amt = "Amount:" + inTransaction.net_amt;
-    lcd::DisplayText(3, 0, Cur_Amt.c_str(), 0);
-    printf("%s\n", Cur_Amt.c_str());
-
-    lcd::DisplayText(4, 0, "Press Enter to print, else press Cancel", 0);
-
-    int x = lk_getkey();
-    lk_dispclr();
-
-    if(x == klok::pc::KEYS::KEY_ENTER)
-    {
-    	std::string buff, buff1, buff2, buff3;
-
-            prn_open();
-            if(prn_paperstatus() != 0)
-            {
-                lk_dispclr();
-                lcd::DisplayText(3, 5, "No Paper !", 1);
-                lk_getkey();
-                return;
-            }
-
-            buff.append("   Daily Report\n\n");
-            buff1.append("    Bill No          ");
-            buff1.append(inTransaction.trans_id);
-            buff1.append("\n");
-            buff1.append("    ID               ");
-            buff1.append(inTransaction.cust_id);
-            buff1.append("\n");
-            buff1.append("    DATE AND TIME    ");
-            buff1.append(inTransaction.date_time);
-            buff1.append("\n");
-            buff1.append("    Gross Amount     ");
-            buff1.append(inTransaction.gross_amt);
-            buff1.append("\n");
-            buff1.append("    Add/Less         ");
-            buff1.append(inTransaction.add_less);
-            buff1.append("\n");
-            buff1.append("     -------------------------------\n");
-            buff2.append("  CASH       ");
-            buff2.append(inTransaction.net_amt);
-            buff2.append("\n");
-            buff3.append("    Billing User ID     ");
-            buff3.append(inTransaction.user_id);
-            buff3.append("\n");
-            buff3.append("     -------------------------------\n");
-            buff3.append("          THANK YOU VISIT AGAIN\n");
-
-            lk_dispclr();
-            lcd::DisplayText(3, 5, "PRINTING Report", 1);
-
-            int ret;
-
-            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
-            returncheck(ret);
-
-            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
-            returncheck(ret);
-
-            ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
-            returncheck(ret);
-
-            ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
-            returncheck(ret);
-
-            ret = printer::WriteText("\n\n\n", 3, 1);
-            returncheck(ret);
-            ret = prn_paper_feed(1);
-            prn_close();
-
-            if(ret == -3)
-            {
-                printf("out of the paper");
-            }
-            else
-            {
-                return;
-            }
-    }
-    else if(x == klok::pc::KEYS::KEY_CANCEL)
-    {
-        printf("pressed cancel while display_transaction_details\n");
-        return;
-    }
-}
-
 void getDateWiseDetails(std::string date)
 {
     std::vector<klok::pc::Transaction> allTransactions;
     if(klok::pc::Transaction::GetTransactionsForDate(getDatabase(), allTransactions, date.c_str(), 20) == 0)
     {
-    	std::string transDate = "on " + date;
+    	std::string transDate = "  Report on " + date;
+        prn_open();
+        std::string buff;
+
+        buff.append(transDate);
+        buff.append("\n\n");
+        
+        int ret;
+        ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+        if(ret == -3)
+        {
+	   		while(prn_paperstatus() != 0)
+		    {
+		        lk_dispclr();
+		        lcd::DisplayText(3, 5, "No Paper !", 1);
+		        int x = lk_getkey();
+		        if(x == klok::pc::KEYS::KEY_ENTER && prn_paperstatus() == 0 )
+		        {
+		            if(printer::WriteText(buff.c_str(), buff.size(), 2) != -3)
+		                break;            
+		        }
+		        else if (x == klok::pc::KEYS::KEY_CANCEL) 
+		        {
+		        return;
+		    	}
+		    }
+		}
+
 
         for(int i = 0; i != allTransactions.size(); i++)
         {
             printf("Transaction No :%s\n", allTransactions[i].trans_id.c_str());
             printf("Customer Id :%s\n", allTransactions[i].cust_id.c_str());
 
-            std::string buff, buff1;
+            std::string buff1;
 
-            prn_open();
-            if(prn_paperstatus() != 0)
-            {
-                lk_dispclr();
-                lcd::DisplayText(3, 5, "No Paper !", 1);
-                lk_getkey();
-                return;
-            }
-
-            buff.append("   Daily Report\n\n");
             buff1.append("    Bill No          ");
             buff1.append(allTransactions[i].trans_id);
             buff1.append("\n");
@@ -703,41 +619,33 @@ void getDateWiseDetails(std::string date)
             buff1.append("    CASH             ");
             buff1.append(allTransactions[i].net_amt);
             buff1.append("\n");
+            buff1.append("     -------------------------------\n");
 
             int ret;
 
-            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
-            returncheck(ret);
-
             ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
-            returncheck(ret);
-
-            ret = printer::WriteText("\n\n\n", 3, 1);
-            returncheck(ret);
-            ret = prn_paper_feed(1);
-            prn_close();
-
             if(ret == -3)
-            {
-                printf("out of the paper");
-            }
-            else
-            {
-                return;
-            }
-
+	        {
+		   		while(prn_paperstatus() != 0)
+			    {
+			        lk_dispclr();
+			        lcd::DisplayText(3, 5, "No Paper !", 1);
+			        int x = lk_getkey();
+			        if(x == klok::pc::KEYS::KEY_ENTER && prn_paperstatus() == 0 )
+			        {
+			            if(printer::WriteText(buff1.c_str(), buff1.size(), 1) != -3)
+			                break;            
+			        }
+			        else if (x == klok::pc::KEYS::KEY_CANCEL) 
+			        {
+			        return;
+			    	}
+			    }
+			}
         }
+        ret = prn_paper_feed(1);
+        prn_close();
 
-        // klok::pc::MenuResult res;
-        // res.wasCancelled = false;
-        // res.selectedIndex = -1;
-
-        // klok::pc::display_sub_range_with_title(allTransactions, transDate.c_str(), 5, res, &getPosTransactionDisplayName);
-
-        // if(!res.wasCancelled)
-        // {
-        //     display_transaction_details(allTransactions[res.selectedIndex]);
-        // }
     }
     else
     {
@@ -856,24 +764,79 @@ void getMonthWiseDetails(std::string month)
     std::vector<klok::pc::Transaction> allTransactions;
     if(klok::pc::Transaction::GetTransactionsForMonth(getDatabase(), allTransactions, month.c_str(), 20) == 0)
     {
-    	std::string transmonth = "on " + month;
+    	std::string transMonth = "   Report on " + month;
+        prn_open();
+        std::string buff;
+
+        buff.append(transMonth);
+        buff.append("\n\n");
+        
+        int ret;
+        ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+        if(ret == -3)
+        {
+	   		while(prn_paperstatus() != 0)
+		    {
+		        lk_dispclr();
+		        lcd::DisplayText(3, 5, "No Paper !", 1);
+		        int x = lk_getkey();
+		        if(x == klok::pc::KEYS::KEY_ENTER && prn_paperstatus() == 0 )
+		        {
+		            if(printer::WriteText(buff.c_str(), buff.size(), 2) != -3)
+		                break;            
+		        }
+		        else if (x == klok::pc::KEYS::KEY_CANCEL) 
+		        {
+		        return;
+		    	}
+		    }
+		}
 
         for(int i = 0; i != allTransactions.size(); i++)
         {
             printf("Transaction No :%s\n", allTransactions[i].trans_id.c_str());
             printf("Customer Id :%s\n", allTransactions[i].cust_id.c_str());
+            std::string buff1;
+
+            buff1.append("    Bill No          ");
+            buff1.append(allTransactions[i].trans_id);
+            buff1.append("\n");
+            buff1.append("    ID               ");
+            buff1.append(allTransactions[i].cust_id);
+            buff1.append("\n");
+            buff1.append("    DATE AND TIME    ");
+            buff1.append(allTransactions[i].date_time);
+            buff1.append("\n");
+            buff1.append("     -------------------------------\n");
+            buff1.append("    CASH             ");
+            buff1.append(allTransactions[i].net_amt);
+            buff1.append("\n");
+            buff1.append("     -------------------------------\n");
+
+            int ret;
+
+            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+            if(ret == -3)
+	        {
+		   		while(prn_paperstatus() != 0)
+			    {
+			        lk_dispclr();
+			        lcd::DisplayText(3, 5, "No Paper !", 1);
+			        int x = lk_getkey();
+			        if(x == klok::pc::KEYS::KEY_ENTER && prn_paperstatus() == 0 )
+			        {
+			            if(printer::WriteText(buff1.c_str(), buff1.size(), 1) != -3)
+			                break;            
+			        }
+			        else if (x == klok::pc::KEYS::KEY_CANCEL) 
+			        {
+			        return;
+			    	}
+			    }
+			}
         }
-
-        klok::pc::MenuResult res;
-        res.wasCancelled = false;
-        res.selectedIndex = -1;
-
-        klok::pc::display_sub_range_with_title(allTransactions, transmonth.c_str(), 5, res, &getPosTransactionDisplayName);
-
-        if(!res.wasCancelled)
-        {
-            display_transaction_details(allTransactions[res.selectedIndex]);
-        }
+        ret = prn_paper_feed(1);
+        prn_close();
     }
     else
     {
@@ -914,26 +877,81 @@ void getYearWiseDetails(std::string year)
     std::vector<klok::pc::Transaction> allTransactions;
     if(klok::pc::Transaction::GetTransactionsForYear(getDatabase(), allTransactions, year.c_str(), 20) == 0)
     {
-    	std::string transyear = "on " + year;
+    	std::string transYear = "    Report on " + year;
+        prn_open();
+        std::string buff;
+
+        buff.append(transYear);
+        buff.append("\n\n");
+        
+        int ret;
+        ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+        if(ret == -3)
+        {
+	   		while(prn_paperstatus() != 0)
+		    {
+		        lk_dispclr();
+		        lcd::DisplayText(3, 5, "No Paper !", 1);
+		        int x = lk_getkey();
+		        if(x == klok::pc::KEYS::KEY_ENTER && prn_paperstatus() == 0 )
+		        {
+		            if(printer::WriteText(buff.c_str(), buff.size(), 2) != -3)
+		                break;            
+		        }
+		        else if (x == klok::pc::KEYS::KEY_CANCEL) 
+		        {
+		        return;
+		    	}
+		    }
+		}
 
         for(int i = 0; i != allTransactions.size(); i++)
         {
             printf("Transaction No :%s\n", allTransactions[i].trans_id.c_str());
             printf("Customer Id :%s\n", allTransactions[i].cust_id.c_str());
             
+        std::string buff1;
+
+            buff1.append("    Bill No          ");
+            buff1.append(allTransactions[i].trans_id);
+            buff1.append("\n");
+            buff1.append("    ID               ");
+            buff1.append(allTransactions[i].cust_id);
+            buff1.append("\n");
+            buff1.append("    DATE AND TIME    ");
+            buff1.append(allTransactions[i].date_time);
+            buff1.append("\n");
+            buff1.append("     -------------------------------\n");
+            buff1.append("    CASH             ");
+            buff1.append(allTransactions[i].net_amt);
+            buff1.append("\n");
+            buff1.append("     -------------------------------\n");
+
+            int ret;
+
+            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+            if(ret == -3)
+	        {
+		   		while(prn_paperstatus() != 0)
+			    {
+			        lk_dispclr();
+			        lcd::DisplayText(3, 5, "No Paper !", 1);
+			        int x = lk_getkey();
+			        if(x == klok::pc::KEYS::KEY_ENTER && prn_paperstatus() == 0 )
+			        {
+			            if(printer::WriteText(buff1.c_str(), buff1.size(), 1) != -3)
+			                break;            
+			        }
+			        else if (x == klok::pc::KEYS::KEY_CANCEL) 
+			        {
+			        return;
+			    	}
+			    }
+			}
         }
+        ret = prn_paper_feed(1);
+        prn_close();
 
-
-        klok::pc::MenuResult res;
-        res.wasCancelled = false;
-        res.selectedIndex = -1;
-
-        klok::pc::display_sub_range_with_title(allTransactions, transyear.c_str(), 5, res, &getPosTransactionDisplayName);
-
-        if(!res.wasCancelled)
-        {
-            display_transaction_details(allTransactions[res.selectedIndex]);
-        }
     }
     else
     {
@@ -1032,9 +1050,6 @@ void display_customer_report(const klok::pc::Customer& inCustomer)
     lcd::DisplayText(2, 0, Cust_Bal.c_str(), 0);
     printf("%s\n", Cust_Bal.c_str());
 
-    gCustomerName = inCustomer.name;
-    gCustomerBalance = inCustomer.cur_amt;
-    gCustomerContact = inCustomer.contact;
     lcd::DisplayText(4, 0, "Press Enter once data have been confirmed", 0);
 
     int x = lk_getkey();
