@@ -638,11 +638,11 @@ namespace klok
 
         const char * Transaction::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_trans";
         const char * Transaction::Queries::GET_ALL_FOR_DATE = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE ? || '\%'";
-        const char * Transaction::Queries::LIST_ALL_DATES = "select  distinct substr(Date_Time,0,11) from pay_coll_trans where  Date_Time like '____-__-__\%'";
+        const char * Transaction::Queries::LIST_ALL_DATES = "select  distinct substr(Date_Time,0,11) from pay_coll_trans where  Date_Time like '____-__-__\%' ORDER BY Trans_ID DESC";
         const char * Transaction::Queries::GET_ALL_FOR_MONTH = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE ? || '\%'";
-        const char * Transaction::Queries::LIST_ALL_MONTHS = "select  distinct substr(Date_Time,0,9) from pay_coll_trans where  Date_Time like '____-__-\%'";
+        const char * Transaction::Queries::LIST_ALL_MONTHS = "select  distinct substr(Date_Time,0,9) from pay_coll_trans where  Date_Time like '____-__-\%' ORDER BY Trans_ID DESC";
         const char * Transaction::Queries::GET_ALL_FOR_YEAR = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE ? || '\%'";
-        const char * Transaction::Queries::LIST_ALL_YEARS = "select  distinct substr(Date_Time,0,6) from pay_coll_trans where  Date_Time like '____-\%'";
+        const char * Transaction::Queries::LIST_ALL_YEARS = "select  distinct substr(Date_Time,0,6) from pay_coll_trans where  Date_Time like '____-\%' ORDER BY Trans_ID DESC";
         const char * Transaction::Queries::GET_ALL_FOR_CUSTOMER = "SELECT * FROM pay_coll_trans WHERE Cust_ID LIKE ? || '\%' ";
         const char * Transaction::Queries::LIST_ALL_CUSTOMERS = "select  distinct substr(Cust_ID,0,7) from pay_coll_trans where  Cust_ID like '______\%' ";
         const char * Transaction::Queries::TABLE_NAME = "pay_coll_trans";
