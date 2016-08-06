@@ -162,10 +162,6 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
 
         std::string buff, buff1, buff2, buff3, buff4, buff5;
 
-        lk_dispclr();
-        lcd::DisplayText(1, 0, "Continue printing",1);
-        lcd::DisplayText(4, 0, "Press Enter ", 0);
-
         int x = lk_getkey();
 
         if(x == klok::pc::KEYS::KEY_ENTER)
@@ -272,13 +268,30 @@ void updateCustomerBalance(float netAmt, std::string principleAmtString, std::st
 	klok::pc::Customer toUpdate;
 
 	int scanned = atoi(gCustomerBalance.c_str());
-	float currentAmt = scanned - netAmt;
+	float currentAmt = scanned + netAmt;
 
 	char customerBalance[10] = {0};
 	sprintf(customerBalance ,"%0.2f", currentAmt);
 
 	toUpdate.id = gCustomerId;
 	toUpdate.cur_amt = customerBalance;
+
+	std::string display_customerBalance = " Balance    : ";
+    display_customerBalance += gCustomerBalance;
+    std::string display_principleAmt = " Gross Amt  : ";
+    display_principleAmt += principleAmtString;
+    std::string display_addLess = " Add/Less   :  ";
+    display_addLess += addLessString;
+    std::string display_updatedBalance = "Collection  : ";
+    display_updatedBalance += customerBalance;
+
+	lk_dispclr();
+	lcd::DisplayText(0, 0, display_customerBalance.c_str(), 0);
+    lcd::DisplayText(1, 0, display_principleAmt.c_str(), 0);
+    lcd::DisplayText(2, 0, display_addLess.c_str(), 0);
+    lcd::DisplayText(3, 0, "--------------------", 0);
+	lcd::DisplayText(4, 0, display_updatedBalance.c_str(), 0);
+	lcd::DisplayText(5, 0, "Press Enter to print", 0);
 
 	insertAndPrint(principleAmtString, addLessString, netAmtString, gCustomerId, gUserId, gTransId, 
 	               customerBalance);
@@ -298,8 +311,6 @@ void updateCustomerBalance(float netAmt, std::string principleAmtString, std::st
 
 void net_amt(float principleAmt, float addLess)
 {
-    lk_getkey();
-    lk_dispclr();
 
     float netAmt = principleAmt + addLess;
     char principleAmtString[30] = {0};
@@ -310,118 +321,33 @@ void net_amt(float principleAmt, float addLess)
     sprintf(addLessString, "%0.2f", addLess);
     sprintf(netAmtString, "%0.2f", netAmt);
 
-    lcd::DisplayText(1, 0, "Net Amount", 0);
-    lcd::DisplayText(3, 0, netAmtString, 0);
-
-    int x = lk_getkey();
-    if(x == klok::pc::KEYS::KEY_ENTER)
-    {
-        updateCustomerBalance(netAmt, principleAmtString, addLessString, netAmtString, gCustomerBalance);
-    }
+    updateCustomerBalance(netAmt, principleAmtString, addLessString, netAmtString, gCustomerBalance);
 }
 
 void add_less(float principleAmt)
 {
-    int x = lk_getkey();
+
     lk_dispclr();
-
-    if(x == klok::pc::KEYS::KEY_ENTER)
-	{
-
-		lcd::DisplayText(2, 5, "Add/Less", 1);
-	    lcd::DisplayText(4, 0, "Press F2 to Add OR F3 to Less", 0);
-
-	    int x = lk_getkey();
-  	    lk_dispclr();
-
-	    if(x == klok::pc::KEYS::KEY_F2)
-	    {
-	    	
-	        int res = 0;
-	        char addLess[10]= {0};
-
-	        lcd::DisplayText(1, 0, "Type in Amount to ADD", 0);
-	        res = lk_getnumeric(4, 0, (unsigned char*)addLess, 10, strlen(addLess));
-	        float scanned = 0;
-
-	        if(sscanf(addLess, "%f", &scanned) == 1 && res > 0)
-	        {
-	            net_amt(principleAmt, scanned);
-	            lcd::DisplayText(4, 0, "Press Enter once data have been confirmed", 0);
-	        }
-	        else
-	        {
-	            lk_dispclr();
-	            lcd::DisplayText(4, 0, "Enter correct Amt", 0);
-	            lk_getkey();
-	        }
-	    
-	    }
-	    else if(x == klok::pc::KEYS::KEY_F3)
-	    {
-	    	int res = 0;
-	        char addLess[10]= {0};
-
-	        lcd::DisplayText(1, 0, "Type Amount to LESS", 0);
-	        res = lk_getnumeric(4, 0, (unsigned char*)addLess, 10, strlen(addLess));
-	        float scanned = 0;
-
-	        if(sscanf(addLess, "%f", &scanned) == 1 && res > 0)
-	        {
-	            net_amt(principleAmt, -scanned);
-	            lcd::DisplayText(4, 0, "Press Enter once data have been confirmed", 0);
-	        }
-	        else
-	        {
-	            lk_dispclr();
-	            lcd::DisplayText(4, 0, "Enter correct Amt", 0);
-	            lk_getkey();
-	        }
-	    }
-	}
-	else
-	{
-    	lk_dispclr();
-      	lcd::DisplayText(4, 0, "Enter correct Amt", 0);
-        lk_getkey();
-	}
-
-    
-}
-
-void display_customer_details(const klok::pc::Customer& inCustomer)
-{
-    lk_dispclr();
-
-    std::string Cust_Name = "Name :" + inCustomer.name;
-    lcd::DisplayText(1, 0, Cust_Name.c_str(), 0);
-    printf("%s\n", Cust_Name.c_str());
-
-    std::string Cust_Bal = "Balance Amt:" + inCustomer.cur_amt;
-    lcd::DisplayText(2, 0, Cust_Bal.c_str(), 0);
-    printf("%s\n", Cust_Bal.c_str());
-
-    gCustomerName = inCustomer.name;
-    gCustomerBalance = inCustomer.cur_amt;
-    gCustomerContact = inCustomer.contact;
-    lcd::DisplayText(4, 0, "Press Enter once data have been confirmed", 0);
+	lcd::DisplayText(2, 5, "Add/Less", 1);
+    lcd::DisplayText(4, 0, "Press F2 to Add, F3 to Less, ENTER to skip", 0);
 
     int x = lk_getkey();
     lk_dispclr();
 
-    if(x == klok::pc::KEYS::KEY_ENTER)
+    if(x == klok::pc::KEYS::KEY_F2)
     {
-    	int res = 0;
-        char grossAmt[10] = {0};
+    	
+        int res = 0;
+        char addLess[10]= {0};
 
-        lcd::DisplayText(1, 0, "Gross Amount", 0);
-        res = lk_getnumeric(4, 0, (unsigned char*)grossAmt, 10, strlen(grossAmt));
-        float scanned =0;
+        lcd::DisplayText(1, 0, "Type in Amount to ADD", 0);
+        res = lk_getnumeric(4, 0, (unsigned char*)addLess, 10, strlen(addLess));
 
-        if(sscanf(grossAmt, "%f", &scanned) == 1 && res > 0)
+        float scanned = 0;
+
+        if(sscanf(addLess, "%f", &scanned) == 1 && res > 0)
         {
-            add_less(scanned);
-            lcd::DisplayText(4, 0, "Press Enter once data have been confirmed", 0);
+            net_amt(principleAmt, scanned);
         }
         else
         {
@@ -429,15 +355,73 @@ void display_customer_details(const klok::pc::Customer& inCustomer)
             lcd::DisplayText(4, 0, "Enter correct Amt", 0);
             lk_getkey();
         }
-
+    
     }
-    else if(x == klok::pc::KEYS::KEY_CANCEL)
+    else if(x == klok::pc::KEYS::KEY_F3)
     {
-        printf("pressed cancel while display_customer_details\n");
-    }
+    	int res = 0;
+        char addLess[10]= {0};
+
+        lcd::DisplayText(1, 0, "Type Amount to LESS", 0);
+        res = lk_getnumeric(4, 0, (unsigned char*)addLess, 10, strlen(addLess));
+
+        float scanned = 0;
+
+        if(sscanf(addLess, "%f", &scanned) == 1 && res > 0)
+        {
+            net_amt(principleAmt, -scanned);
+        }
+        else
+        {
+            lk_dispclr();
+            lcd::DisplayText(4, 0, "Enter correct Amt", 0);
+            lk_getkey();
+        }
+    }else if(x == klok::pc::KEYS::KEY_ENTER)
+    {
+
+    	float scanned = 0;
+    	net_amt(principleAmt, scanned);
+    } 
 }
 
-void getCustomerDetails()
+void display_customer_details(const klok::pc::Customer& inCustomer)
+{
+    lk_dispclr();
+
+    std::string Cust_Name = "Name :" + inCustomer.name;
+    lcd::DisplayText(0, 0, Cust_Name.c_str(), 0);
+    printf("%s\n", Cust_Name.c_str());
+
+    std::string Cust_Bal = "Balance Amt:" + inCustomer.cur_amt;
+    lcd::DisplayText(1, 0, Cust_Bal.c_str(), 0);
+    printf("%s\n", Cust_Bal.c_str());
+
+    gCustomerName = inCustomer.name;
+    gCustomerBalance = inCustomer.cur_amt;
+    gCustomerContact = inCustomer.contact;
+
+   	int res = 0;
+    char grossAmt[10] = {0};
+
+    lcd::DisplayText(3, 0, "Gross Amount", 0);
+    res = lk_getnumeric(4, 0, (unsigned char*)grossAmt, 10, strlen(grossAmt));
+    float scanned =0;
+
+    if(sscanf(grossAmt, "%f", &scanned) == 1 && res > 0)
+    {
+        add_less(scanned);
+    }
+    else
+    {
+        lk_dispclr();
+        lcd::DisplayText(4, 0, "Enter correct Amt", 0);
+        lk_getkey();
+    }
+
+}
+
+void getCustomerDetails(std::string display_transid)
 {
     std::vector<klok::pc::Customer> allCustomers;
     if(klok::pc::Customer::GetAllFromDatabase(getDatabase(), allCustomers, 10) == 0)
@@ -452,7 +436,7 @@ void getCustomerDetails()
         res.wasCancelled = false;
         res.selectedIndex = -1;
 
-        klok::pc::display_sub_range(allCustomers, 4, res, &getPosCustomerDisplayName);
+        klok::pc::display_sub_range_with_title(allCustomers, display_transid.c_str(), 4, res, &getPosCustomerDisplayName);
 
         if(!res.wasCancelled)
         {
@@ -470,14 +454,6 @@ void PayCollection()
 {
     printf("PayCollection Activity\n");
 
-    lk_bkl_timeout(20);
-    lk_dispclr();
-
-    lcd::DisplayText(1, 0, "1.PayCollection Menu ", 0);
-    lcd::DisplayText(4, 0, "Press any key", 0);
-
-    lk_getkey();
-
     std::string Trans_ID = "";
     if(klok::pc::User::GetNextTransactionIDForUser(getDatabase(), gUserId.c_str(), Trans_ID) != 0)
     {
@@ -492,32 +468,22 @@ void PayCollection()
 
     gTransId = Trans_ID;
 
-    lk_dispclr();
 
     std::string display_transid = "TransNo :";
     display_transid += Trans_ID;
 
-    lcd::DisplayText(2, 0, display_transid.c_str(), 0);
     printf("Trans_ID :%s\n", Trans_ID.c_str());
 
-    lcd::DisplayText(4, 0, "Press Enter key to continue", 0);
-    int x = lk_getkey();
     lk_dispclr();
-
-    if(x == klok::pc::KEYS::KEY_ENTER)
-    {
-        getCustomerDetails();
-
-    }
-    else if(x == klok::pc::KEYS::KEY_CANCEL)
-    {
-        printf("pressed cancel after TransNo screen\n");
-    }
+    getCustomerDetails(display_transid);
 }
 
 void POS()
 {
     printf("POS Activity\n");
+    lk_dispclr();
+    lcd::DisplayText(3, 5, "Access Denied!", 1);
+    lk_getkey();
 }
 
 void Billing()
@@ -1363,7 +1329,7 @@ void Export()
 {
 	lk_dispclr();
 	lcd::DisplayText(2, 0, "Insert the usb device and press ENTER", 0);
-	printf("Download Activity\n");
+	printf("Export Activity\n");
 
 	int ret=0;
 	FILE *fp;
@@ -1500,7 +1466,7 @@ void Import()
 {
 	lk_dispclr();
 	lcd::DisplayText(2, 0, "Insert the usb device and press ENTER", 0);
-    printf("Upload Activity\n");
+    printf("Import Activity\n");
 
 	int ret=0;
 	FILE *fp;
