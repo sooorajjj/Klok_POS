@@ -653,7 +653,8 @@ void getDateWiseDetails(std::string date)
     }
 }
 
-void EnteringDate(){
+void EnteringDate()
+{
 
 	int res = 0;
 
@@ -1358,11 +1359,15 @@ void Export()
 
 				lk_getkey();
 				ret=system("cp /mnt/jffs2/PayCollect.db /mnt/usb/");
+
 				lk_dispclr();
+				lcd::DisplayText(3,2,"Copying ....",0);
+				lcd::DisplayText(5,0,"This may take 5-8 seconds",0);
 				sleep(6);
 				
 					if (ret == 0)
 					{
+					lk_dispclr();
 					lcd::DisplayText(3,2,"Copying Successfull",0);
 					lcd::DisplayText(5,0,"Press Any Key to Exit",0);
 	                lk_getkey();
@@ -1415,10 +1420,13 @@ void Export()
 				ret=system("cp /mnt/jffs2/PayCollect.db /mnt/usb/");
 				
 				lk_dispclr();
+				lcd::DisplayText(3,2,"Copying ....",0);
+				lcd::DisplayText(5,0,"This may take 5-8 seconds",0);
 				sleep(6);
 				
 					if (ret == 0)
 					{
+					lk_dispclr();
 					lcd::DisplayText(3,2,"Copying Successfull",0);
 					lcd::DisplayText(5,0,"Press Any Key to Exit",0);
 	                lk_getkey();
@@ -1497,10 +1505,13 @@ void Import()
 				ret=system("cp /mnt/usb/PayCollect.db /mnt/jffs2/");
 				
 				lk_dispclr();
+				lcd::DisplayText(3,2,"Copying ....",0);
+				lcd::DisplayText(5,0,"This may take 5-8 seconds",0);
 				sleep(6);
 				
 					if (ret == 0)
 					{
+					lk_dispclr();
 					lcd::DisplayText(3,2,"Copying Successfull",0);
 					lcd::DisplayText(5,0,"Press Any Key to Exit",0);
 	                lk_getkey();
@@ -1551,10 +1562,13 @@ void Import()
 				ret=system("cp /mnt/usb/PayCollect.db /mnt/jffs2/");
 				
 				lk_dispclr();
+				lcd::DisplayText(3,2,"Copying ....",0);
+				lcd::DisplayText(5,0,"This may take 5-8 seconds",0);
 				sleep(6);
 				
 					if (ret == 0)
 					{
+					lk_dispclr();
 					lcd::DisplayText(3,2,"Copying Successfull",0);
 					lcd::DisplayText(5,0,"Press Any Key to Exit",0);
 	                lk_getkey();

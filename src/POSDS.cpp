@@ -605,7 +605,7 @@ namespace klok
 
         }
 
-        const char * User::Queries::GET_NEXT_TRANS_ID_FOR_USER = "select MAX(Trans_ID)+1 as Next_ID from pay_coll_trans where User_ID=?";
+        const char * User::Queries::GET_NEXT_TRANS_ID_FOR_USER = "select MAX(Trans_No)+1 as Next_ID from pay_coll_trans where User_ID=?";
         const char * User::Queries::TABLE_NAME = "pay_coll_user";
         const char * User::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_user";
         const char * User::Queries::SELECT_USER_WITH_ID_FROM_TABLE = "SELECT * FROM pay_coll_user WHERE User_ID=?";
@@ -620,7 +620,7 @@ namespace klok
 
         const char * User::Queries::DROP_USER_TABLE_QUERY = "DROP TABLE pay_coll_user IF EXISTS;";
 
-        const char * Customer::Queries::GET_NEXT_TRANS_ID_FOR_CUSTOMER = "select MAX(Trans_ID)+1 as Next_ID from pay_coll_trans where Cust_ID=?";
+        const char * Customer::Queries::GET_NEXT_TRANS_ID_FOR_CUSTOMER = "select MAX(Trans_No)+1 as Next_ID from pay_coll_trans where Cust_ID=?";
         const char * Customer::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_cust";
         const char * Customer::Queries::TABLE_NAME = "pay_coll_cust";
         const char * Customer::Queries::SELECT_CUSTOMER_WITH_ID_FROM_TABLE = "SELECT * FROM pay_coll_cust WHERE Cust_ID=?";
@@ -638,18 +638,18 @@ namespace klok
 
         const char * Transaction::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_trans";
         const char * Transaction::Queries::GET_ALL_FOR_DATE = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE ? || '\%'";
-        const char * Transaction::Queries::LIST_ALL_DATES = "select  distinct substr(Date_Time,0,11) from pay_coll_trans where  Date_Time like '____-__-__\%' ORDER BY Trans_ID DESC";
+        const char * Transaction::Queries::LIST_ALL_DATES = "select  distinct substr(Date_Time,0,11) from pay_coll_trans where  Date_Time like '____-__-__\%' ORDER BY Trans_No DESC";
         const char * Transaction::Queries::GET_ALL_FOR_MONTH = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE ? || '\%'";
-        const char * Transaction::Queries::LIST_ALL_MONTHS = "select  distinct substr(Date_Time,0,9) from pay_coll_trans where  Date_Time like '____-__-\%' ORDER BY Trans_ID DESC";
+        const char * Transaction::Queries::LIST_ALL_MONTHS = "select  distinct substr(Date_Time,0,9) from pay_coll_trans where  Date_Time like '____-__-\%' ORDER BY Trans_No DESC";
         const char * Transaction::Queries::GET_ALL_FOR_YEAR = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE ? || '\%'";
-        const char * Transaction::Queries::LIST_ALL_YEARS = "select  distinct substr(Date_Time,0,6) from pay_coll_trans where  Date_Time like '____-\%' ORDER BY Trans_ID DESC";
+        const char * Transaction::Queries::LIST_ALL_YEARS = "select  distinct substr(Date_Time,0,6) from pay_coll_trans where  Date_Time like '____-\%' ORDER BY Trans_No DESC";
         const char * Transaction::Queries::GET_ALL_FOR_CUSTOMER = "SELECT * FROM pay_coll_trans WHERE Cust_ID LIKE ? || '\%' ";
         const char * Transaction::Queries::LIST_ALL_CUSTOMERS = "select  distinct substr(Cust_ID,0,7) from pay_coll_trans where  Cust_ID like '______\%' ";
         const char * Transaction::Queries::TABLE_NAME = "pay_coll_trans";
-        const char * Transaction::Queries::SELECT_TRANSACTION_WITH_ID_FROM_TABLE = "SELECT * FROM pay_coll_trans WHERE Trans_ID=?";
+        const char * Transaction::Queries::SELECT_TRANSACTION_WITH_ID_FROM_TABLE = "SELECT * FROM pay_coll_trans WHERE Trans_No=?";
         const char * Transaction::Queries::CREATE_TRANSACTION_TABLE_QUERY =
             "CREATE TABLE pay_coll_trans ("
-            "Trans_ID       INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
+            "Trans_No       INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
             "Cust_ID 		 INT   NOT NULL,"
             "User_ID	  	 INT	 NOT NULL,"
             "Grs_Amt 		 INT	 NOT NULL,"
