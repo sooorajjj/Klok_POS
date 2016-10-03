@@ -57,7 +57,7 @@ static SQLite::Database& getDatabase()
     {
         try
         {
-            gDatabasePtr = new SQLite::Database("PayCollect.db", SQLite::OPEN_READWRITE, SQLite::OPEN_CREATE);
+            gDatabasePtr = new SQLite::Database("/mnt/jffs2/PayCollect.db", SQLite::OPEN_READWRITE, SQLite::OPEN_CREATE);
         }
         catch(std::exception & e)
         {
@@ -1612,6 +1612,11 @@ void Import()
         }
 }
 
+// void Logout(){
+
+// 	main();
+// }
+
 void Settings()
 {
     printf("Settings\n");
@@ -1629,6 +1634,7 @@ void Settings()
         menu.maxEntries = 2;
         strcpy(menu.menu[0],"Export");
         strcpy(menu.menu[1],"Import");
+        // strcpy(menu.menu[2],"Logout");
 
         while(1)
         {
@@ -1651,6 +1657,10 @@ void Settings()
                 case 2:
                     Import();
                     break;
+
+                // case 3:
+                //     Logout();
+                //     break;
                 }
                 break;
             }
