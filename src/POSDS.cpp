@@ -605,6 +605,326 @@ namespace klok
 
         }
 
+        int32_t Product::GetAllFromDatabase(SQLite::Database& db, std::vector<Product>& outProducts, uint32_t maxToRead)
+        {
+            try
+            {
+                SQLite::Statement query(db, Product::Queries::GET_ALL_QUERY);
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    Product outProduct;
+                    outProduct.id = query.getColumn(0).getString();
+                    outProduct.name = query.getColumn(1).getString();
+                    outProduct.short_name = query.getColumn(2).getString();
+                    outProduct.code = query.getColumn(3).getString();
+                    outProduct.sales_rate = query.getColumn(4).getString();
+                    outProducts.push_back(outProduct);
+                }
+
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Product::GetAllFromDatabase -> Fatal Error query :%s\n %s\n", Product::Queries::GET_ALL_QUERY, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+        int32_t Product::CreateTable(SQLite::Database& db,bool dropIfExist)
+        {
+            try
+            {
+                if(dropIfExist)
+                {
+                    SQLite::Statement query(db, Product::Queries::DROP_PRODUCT_TABLE_QUERY);
+                    query.executeStep();
+                }
+
+                SQLite::Statement query(db, Product::Queries::DROP_PRODUCT_TABLE_QUERY);
+                if(query.executeStep())
+                {
+                    return 0;
+                }
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Product::CreateTable -> Fatal Error %s\n", e.what());
+            }
+                return -1;
+
+        }
+
+        int32_t Product::FromDatabase(SQLite::Database& db, const char* id, Product& outProduct)
+        {
+            try
+            {
+                SQLite::Statement query(db, Product::Queries::SELECT_PRODUCT_WITH_ID_FROM_TABLE);
+                query.bind(1, id);
+
+                if(query.executeStep())
+                {
+                    outProduct.id = query.getColumn(0).getString();
+                    outProduct.name = query.getColumn(1).getString();
+                    outProduct.short_name = query.getColumn(2).getString();
+                    outProduct.code = query.getColumn(3).getString();
+                    outProduct.sales_rate = query.getColumn(4).getString();
+                    return 0;
+                }
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Product::FromDatabase -> Fatal Error %s\n", e.what());
+            }
+           return -1;
+        }
+
+        int32_t PosBillHeader::GetAllFromDatabase(SQLite::Database& db, std::vector<PosBillHeader>& outPosBillHeaders, uint32_t maxToRead)
+        {
+            try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::GET_ALL_QUERY);
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    PosBillHeader outPosBillHeader;
+                    outPosBillHeader.id = query.getColumn(0).getString();
+                    outPosBillHeader.cust_id = query.getColumn(1).getString();
+                    outPosBillHeader.gross_amt = query.getColumn(2).getString();
+                    outPosBillHeader.add_less = query.getColumn(3).getString();
+                    outPosBillHeader.net_amt = query.getColumn(4).getString();
+                    outPosBillHeader.user_id = query.getColumn(3).getString();
+                    outPosBillHeader.date_time = query.getColumn(3).getString();
+                    outPosBillHeader.device_id = query.getColumn(3).getString();
+                    outPosBillHeader.unique_items = query.getColumn(3).getString();
+                    outPosBillHeaders.push_back(outPosBillHeader);
+                }
+
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::GetAllFromDatabase -> Fatal Error query :%s\n %s\n", PosBillHeader::Queries::GET_ALL_QUERY, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+        int32_t PosBillHeader::CreateTable(SQLite::Database& db,bool dropIfExist)
+        {
+            try
+            {
+                if(dropIfExist)
+                {
+                    SQLite::Statement query(db, PosBillHeader::Queries::DROP_POS_BILL_HEADER_TABLE_QUERY);
+                    query.executeStep();
+                }
+
+                SQLite::Statement query(db, PosBillHeader::Queries::DROP_POS_BILL_HEADER_TABLE_QUERY);
+                if(query.executeStep())
+                {
+                    return 0;
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::CreateTable -> Fatal Error %s\n", e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+        int32_t PosBillHeader::FromDatabase(SQLite::Database& db, const char* id, PosBillHeader& outPosBillHeader)
+        {
+            try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::SELECT_POS_BILL_HEADER_WITH_ID_FROM_TABLE);
+                query.bind(1, id);
+
+                if(query.executeStep())
+                {
+                    outPosBillHeader.id = query.getColumn(0).getString();
+                    outPosBillHeader.cust_id = query.getColumn(1).getString();
+                    outPosBillHeader.gross_amt = query.getColumn(2).getString();
+                    outPosBillHeader.add_less = query.getColumn(3).getString();
+                    outPosBillHeader.net_amt = query.getColumn(4).getString();
+                    outPosBillHeader.user_id = query.getColumn(3).getString();
+                    outPosBillHeader.date_time = query.getColumn(3).getString();
+                    outPosBillHeader.device_id = query.getColumn(3).getString();
+                    outPosBillHeader.unique_items = query.getColumn(3).getString();
+                    return 0;
+                }
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::FromDatabase -> Fatal Error %s\n", e.what());
+            }
+           return -1;
+        }
+
+        int32_t PosBillHeader::InsertIntoTable(SQLite::Database& db, const PosBillHeader& toInsert)
+        {
+            try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::INSERT_INTO_TABLE);
+                query.bind(1, toInsert.cust_id);
+                query.bind(2, toInsert.user_id);
+                query.bind(3, toInsert.gross_amt);
+                query.bind(4, toInsert.add_less);
+                query.bind(5, toInsert.net_amt);
+                query.bind(6, toInsert.date_time);
+                query.bind(7, toInsert.device_id);
+                query.bind(8, toInsert.unique_items);
+
+                query.executeStep();
+
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::InsertIntoTable -> Fatal Error %s\n", e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+        int32_t PosBillItem::GetAllFromDatabase(SQLite::Database& db, std::vector<PosBillItem>& outPosBillItems, uint32_t maxToRead)
+        {
+            try
+            {
+                SQLite::Statement query(db, PosBillItem::Queries::GET_ALL_QUERY);
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    PosBillItem outPosBillItem;
+                    outPosBillItem.bill_id = query.getColumn(1).getString();
+                    outPosBillItem.product_id = query.getColumn(2).getString();
+                    outPosBillItem.quantity = query.getColumn(3).getString();
+                    outPosBillItem.net_amt = query.getColumn(4).getString();
+                    outPosBillItems.push_back(outPosBillItem);
+                }
+
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillItem::GetAllFromDatabase -> Fatal Error query :%s\n %s\n", PosBillItem::Queries::GET_ALL_QUERY, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+        int32_t PosBillItem::CreateTable(SQLite::Database& db,bool dropIfExist)
+        {
+            try
+            {
+                if(dropIfExist)
+                {
+                    SQLite::Statement query(db, PosBillItem::Queries::DROP_POS_BILL_ITEM_TABLE_QUERY);
+                    query.executeStep();
+                }
+
+                SQLite::Statement query(db, PosBillItem::Queries::DROP_POS_BILL_ITEM_TABLE_QUERY);
+                if(query.executeStep())
+                {
+                    return 0;
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillItem::CreateTable -> Fatal Error %s\n", e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+        int32_t PosBillItem::FromDatabase(SQLite::Database& db, const char* id, PosBillItem& outPosBillItem)
+        {
+            try
+            {
+                SQLite::Statement query(db, PosBillItem::Queries::SELECT_POS_BILL_ITEM_WITH_ID_FROM_TABLE);
+                query.bind(1, id);
+
+                if(query.executeStep())
+                {
+                    outPosBillItem.bill_id = query.getColumn(1).getString();
+                    outPosBillItem.product_id = query.getColumn(2).getString();
+                    outPosBillItem.quantity = query.getColumn(3).getString();
+                    outPosBillItem.net_amt = query.getColumn(4).getString();
+                    return 0;
+                }
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillItem::FromDatabase -> Fatal Error %s\n", e.what());
+            }
+           return -1;
+        }
+
+        int32_t PosBillItem::InsertIntoTable(SQLite::Database& db, const PosBillItem& toInsert)
+        {
+            try
+            {
+                SQLite::Statement query(db, PosBillItem::Queries::INSERT_INTO_TABLE);
+                query.bind(1, toInsert.bill_id);
+                query.bind(2, toInsert.product_id);
+                query.bind(3, toInsert.quantity);
+                query.bind(4, toInsert.net_amt);
+
+                query.executeStep();
+
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillItem::InsertIntoTable -> Fatal Error %s\n", e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+        int32_t PosBillHeader::GetLastBillID(SQLite::Database& db, std::string& outID)
+        {
+            try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::GET_LAST_POS_BILL_HEADER_ID_FROM_TABLE);
+
+                if(query.executeStep())
+                {
+                    outID = query.getColumn(0).getString();
+                    return 0;
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::GetLastBillID -> Fatal Error query : %s \n %s\n", PosBillHeader::Queries::GET_LAST_POS_BILL_HEADER_ID_FROM_TABLE, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+
+        // User Queries
+
         const char * User::Queries::GET_NEXT_TRANS_ID_FOR_USER = "select MAX(Trans_No)+1 as Next_ID from pay_coll_trans where User_ID=?";
         const char * User::Queries::TABLE_NAME = "pay_coll_user";
         const char * User::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_user";
@@ -619,6 +939,8 @@ namespace klok
             "Comp_Address   VARCHAR(100) NOT NULL);";
 
         const char * User::Queries::DROP_USER_TABLE_QUERY = "DROP TABLE pay_coll_user IF EXISTS;";
+
+        // Customer Queries
 
         const char * Customer::Queries::GET_NEXT_TRANS_ID_FOR_CUSTOMER = "select MAX(Trans_No)+1 as Next_ID from pay_coll_trans where Cust_ID=?";
         const char * Customer::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_cust";
@@ -635,6 +957,8 @@ namespace klok
 
 		const char * Customer::Queries::UPDATE_CUSTOMER_BALANCE = "UPDATE pay_coll_cust SET Cur_Amt=? WHERE Cust_ID=?;";
         const char * Customer::Queries::DROP_CUSTOMER_TABLE_QUERY = "DROP TABLE pay_coll_cust IF EXISTS;";
+
+        // Transaction Queries
 
         const char * Transaction::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_trans";
         const char * Transaction::Queries::GET_ALL_FOR_DATE = "SELECT * FROM pay_coll_trans WHERE Date_Time LIKE ? || '\%'";
@@ -669,5 +993,143 @@ namespace klok
             " Net_Amt,"
             " Date_Time) VALUES ("
             "?, ?, ?, ?, ?, ?);";
+
+        // Product Queries
+
+        const char * Product::Queries::TABLE_NAME = "pos_product";
+        const char * Product::Queries::GET_ALL_QUERY = "SELECT * FROM pos_product";
+        const char * Product::Queries::SELECT_PRODUCT_WITH_ID_FROM_TABLE = "SELECT * FROM pos_product WHERE Id=?";
+        const char * Product::Queries::DROP_PRODUCT_TABLE_QUERY = "DROP TABLE pos_product IF EXISTS;";
+
+        const char * Product::Queries::CREATE_PRODUCT_TABLE_QUERY =
+            "CREATE TABLE pos_product ("
+            "Id           INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "Name         TEXT,"
+            "ShortName    TEXT,"
+            "Code         TEXT    UNIQUE,"
+            "SalesRate    REAL    );";
+
+        // POS Bill Header Queries
+
+        const char * PosBillHeader::Queries::TABLE_NAME = "pos_bill_header";
+        const char * PosBillHeader::Queries::GET_ALL_QUERY = "SELECT * FROM pos_bill_header";
+        const char * PosBillHeader::Queries::SELECT_POS_BILL_HEADER_WITH_ID_FROM_TABLE = "SELECT * FROM pos_bill_header WHERE Id=?";
+        const char * PosBillHeader::Queries::DROP_POS_BILL_HEADER_TABLE_QUERY = "DROP TABLE pos_bill_header IF EXISTS;";
+        const char * PosBillHeader::Queries::GET_LAST_POS_BILL_HEADER_ID_FROM_TABLE = "select MAX(Id) from pos_bill_header ";
+        const char * PosBillHeader::Queries::GET_ALL_FOR_DATE = "SELECT * FROM pos_bill_header WHERE Date_Time LIKE ? || '\%'";
+        const char * PosBillHeader::Queries::LIST_ALL_DATES = "select  distinct substr(Date_Time,0,11) from pos_bill_header where  Date_Time like '____-__-__\%' ORDER BY Id DESC";
+
+
+        const char * PosBillHeader::Queries::CREATE_POS_BILL_HEADER_TABLE_QUERY =
+            "CREATE TABLE pos_bill_header ("
+            "Id           INTEGER    NOT NULL PRIMARY KEY AUTOINCREMENT,"
+            "Cust_ID         INT     NOT NULL,"
+            "User_ID         INT     NOT NULL,"
+            "Grs_Amt         INT     NOT NULL,"
+            "Add_Less        INT     NOT NULL,"
+            "Net_Amt         INT     NOT NULL,"
+            "Date_Time       DATE    NOT NULL,"
+            "Device_ID       INT     NOT NULL,"
+            "Unique_Items    INT     NOT NULL,"
+            "FOREIGN KEY (Cust_ID) REFERENCES pay_coll_cust(Cust_ID) ON UPDATE CASCADE,"
+            "FOREIGN KEY (User_ID) REFERENCES pay_coll_cust(User_ID) ON UPDATE CASCADE );";
+
+        const char * PosBillHeader::Queries::INSERT_INTO_TABLE =
+            "INSERT INTO pos_bill_header ("
+            " Cust_ID,"
+            " User_ID,"
+            " Grs_Amt,"
+            " Add_Less,"
+            " Net_Amt,"
+            " Date_Time,"
+            " Device_ID,"
+            " Unique_Items) VALUES ("
+            "?, ?, ?, ?, ?, ?, ?, ?);";
+
+
+        // POS Bill Item Queries
+
+        const char * PosBillItem::Queries::TABLE_NAME = "pos_bill_item";
+        const char * PosBillItem::Queries::GET_ALL_QUERY = "SELECT * FROM pos_bill_item";
+        const char * PosBillItem::Queries::SELECT_POS_BILL_ITEM_WITH_ID_FROM_TABLE = "SELECT * FROM pos_bill_item WHERE Id=?";
+        const char * PosBillItem::Queries::DROP_POS_BILL_ITEM_TABLE_QUERY = "DROP TABLE pos_bill_item IF EXISTS;";
+
+        const char * PosBillItem::Queries::CREATE_POS_BILL_ITEM_TABLE_QUERY =
+            "CREATE TABLE pos_bill_item ("
+            "Bill_ID         INT     NOT NULL,"
+            "Product_ID      INT     NOT NULL,"
+            "Quantity        INT     NOT NULL,"
+            "Net_Amt         INT     NOT NULL,"
+            "FOREIGN KEY (Bill_ID) REFERENCES pos_bill_header(Id) ON UPDATE CASCADE,"
+            "FOREIGN KEY (Product_ID) REFERENCES pos_product(Product_ID) ON UPDATE CASCADE );";
+
+        const char * PosBillItem::Queries::INSERT_INTO_TABLE =
+            "INSERT INTO pos_bill_item ("
+            " Bill_ID,"
+            " Product_ID,"
+            " Quantity,"
+            " Net_Amt) VALUES ("
+            "?, ?, ?, ?);";
+
+
+        int32_t PosBillHeader::ListUniqueDates(SQLite::Database& db, std::vector<std::string>& dates_unique, uint32_t maxToRead)
+        {
+            try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::LIST_ALL_DATES);
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    dates_unique.push_back(query.getColumn(0).getString());
+                }
+
+                return 0;
+
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::⁠⁠⁠ListUniqueDates -> Fatal Error query :%s\n %s\n", PosBillHeader::Queries::LIST_ALL_DATES, e.what());
+                return -1;
+            }
+
+            return 0;
+
+        }
+
+        int32_t PosBillHeader::GetTransactionsForDate(SQLite::Database& db, std::vector<PosBillHeader>& outBills, const char * date, uint32_t maxToRead)
+        {
+
+             try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::GET_ALL_FOR_DATE);
+                query.bind(1, date);
+
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    PosBillHeader outBill;
+                    outBill.id  = query.getColumn(0).getString();
+                    outBill.cust_id   = query.getColumn(1).getString();
+                    outBill.user_id   = query.getColumn(2).getString();
+                    outBill.gross_amt = query.getColumn(3).getString();
+                    outBill.add_less  = query.getColumn(4).getString();
+                    outBill.net_amt   = query.getColumn(5).getString();
+                    outBill.date_time = query.getColumn(6).getString();
+                    outBill.device_id = query.getColumn(7).getString();
+                    outBill.unique_items = query.getColumn(8).getString();
+                    outBills.push_back(outBill);
+                }
+
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::GetTransactionsForDate -> Fatal Error query :%s\n %s\n", PosBillHeader::Queries::GET_ALL_FOR_DATE, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
     }
 }

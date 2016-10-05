@@ -1,12 +1,12 @@
 #include <iostream>
+#include <sstream>
 #include <ctime>
-#include <stdio.h>
 #include <stdlib.h>
 #include <SQLiteCpp/SQLiteCpp.h>
+#include <map>
 
 #include "PosDataStructures.hpp"
 #include "Visiontek.hpp"
-#include <vector>
 
 extern "C"
 {
@@ -19,9 +19,62 @@ extern "C"
 
 namespace
 {
-std::string gUserId = "", gUserName = "", gTransId = "", gCustomerId = "", gCustomerName = "", gCustomerBalance = "", gCustomerContact = "",
-            gCompanyName = "", gCompanyAddress = "";
-SQLite::Database* gDatabasePtr = NULL;
+	std::string 
+		gUserId = "", 
+		gUserName = "", 
+		gTransId = "", 
+		gCustomerId = "", 
+		gCustomerName = "", 
+		gCustomerBalance = "", 
+		gCustomerContact = "",
+        gCompanyName = "", 
+        gCompanyAddress = "", 
+        gProductName = "";
+
+	SQLite::Database* gDatabasePtr = NULL;
+
+	float gBillAmt = 0.00 ;
+
+
+	std::map<std::string,klok::pc::POSBillEntry> gBillData;
+	std::map<std::string,klok::pc::Product> gAllSelectedProducts;
+
+	typedef std::map<std::string,klok::pc::POSBillEntry>::iterator BillIter_t;
+
+}
+
+
+static void addItemToBill(const klok::pc::Product & product,float quantity){
+
+	if(gBillData.count(product.id) > 0){
+
+		printf("The bill already contains item %s - %s  : %f , changing to %f\n", product.short_name.c_str(),product.code.c_str(),gBillData[product.id].Quantity,quantity);
+
+		if(quantity == 0) gBillData.erase(product.id);
+		else gBillData[product.id].Quantity = quantity;
+
+	}
+	else
+	{
+
+		float salesRateParsed = 0.0f;
+
+		if(std::sscanf(product.sales_rate.c_str() , "%f",&salesRateParsed) == 1){
+
+			klok::pc::POSBillEntry newEntry;
+			newEntry.Quantity = quantity;
+			newEntry.SalesRate = salesRateParsed;
+			gBillData[product.id] = newEntry;
+
+			printf("inserted new item to bill \n");
+		}
+		else
+		{
+			printf("parsing price for item failed %s - %s\n",product.short_name.c_str(),product.sales_rate.c_str());
+		}
+
+
+	}
 }
 
 void prompt_shutdown()
@@ -75,6 +128,14 @@ const char* getPosCustomerDisplayName(const klok::pc::Customer& inCustomer)
 {
     return inCustomer.id.c_str();
 }
+const char* getPosProductDisplayName(const klok::pc::Product& inProduct)
+{
+    std::string product_name_list = inProduct.code +" :"+ inProduct.name;
+
+    return product_name_list.c_str();
+}
+
+
 const char* getPosTransactionDisplayName(const klok::pc::Transaction& inTransaction)
 {
     return inTransaction.trans_id.c_str();
@@ -478,12 +539,464 @@ void PayCollection()
     getCustomerDetails(display_transid);
 }
 
+struct BillSummaryDisplayEntry
+{
+
+	std::string id,code,short_name;
+	klok::pc::POSBillEntry details;
+};
+
+static const char * BillSummaryDisplayEntryToString(const BillSummaryDisplayEntry & entry){
+	char displayBuffer[30] = {0};
+	snprintf(displayBuffer,sizeof(displayBuffer) - 1 , "%s:%s - %.02f" ,entry.code.c_str(),entry.short_name.c_str(), entry.details.Quantity); 
+	std::string display = displayBuffer;
+	return display.c_str();
+}
+
+void edit_product_quantity(const BillSummaryDisplayEntry & entry)
+{
+
+	lk_dispclr();
+	int res = 0;
+
+	char qty[10] = {0};
+	float scanned =0;
+
+	lcd::DisplayText(2, 0, "Enter Quantity", 0);
+	res = lk_getnumeric(4, 0, (unsigned char*)qty, 10, strlen(qty));
+    if(sscanf(qty, "%f", &scanned) == 1 && res > 0)
+    {
+    	if(scanned == 0)
+    	{
+			gBillData.erase(entry.id);
+			gAllSelectedProducts.erase(entry.id);
+
+			printf("removing %s from bill\n", entry.short_name.c_str());
+		}
+		else
+		{
+			printf("updating %s from bill\n", entry.short_name.c_str());
+			gBillData[entry.id] .Quantity = scanned;
+		}
+    }
+
+}
+float add_less_pos()
+{
+
+    lk_dispclr();
+	lcd::DisplayText(2, 5, "Add/Less", 1);
+    lcd::DisplayText(4, 0, "Press F2 to Add, F3 to Less, ENTER to skip", 0);
+
+    int x = lk_getkey();
+    lk_dispclr();
+
+    if(x == klok::pc::KEYS::KEY_F2)
+    {
+    	
+        int res = 0;
+        char addLess[10]= {0};
+
+        lcd::DisplayText(1, 0, "Type in Amount to ADD", 0);
+        res = lk_getnumeric(4, 0, (unsigned char*)addLess, 10, strlen(addLess));
+
+        float scanned = 0;
+
+        if(sscanf(addLess, "%f", &scanned) == 1 && res > 0)
+        {
+            return scanned;
+        }
+        else
+        {
+            lk_dispclr();
+            lcd::DisplayText(4, 0, "Enter correct Amt", 0);
+            lk_getkey();
+        }
+    
+    }
+    else if(x == klok::pc::KEYS::KEY_F3)
+    {
+    	int res = 0;
+        char addLess[10]= {0};
+
+        lcd::DisplayText(1, 0, "Type Amount to LESS", 0);
+        res = lk_getnumeric(4, 0, (unsigned char*)addLess, 10, strlen(addLess));
+
+        float scanned = 0;
+
+        if(sscanf(addLess, "%f", &scanned) == 1 && res > 0)
+        {
+            return -scanned;
+        }
+        else
+        {
+            lk_dispclr();
+            lcd::DisplayText(4, 0, "Enter correct Amt", 0);
+            lk_getkey();
+        }
+    }else if(x == klok::pc::KEYS::KEY_ENTER)
+    {
+
+        return 0;
+    } 
+
+   return 0;
+}
+
+
+template <typename T> std::string tostr(const T& t) { 
+   std::ostringstream os; 
+   os<<t; 
+   return os.str(); 
+} 
+
+void display_bill_summary()
+{
+
+	lk_dispclr();
+
+	gBillAmt = 0;
+	gAllSelectedProducts.clear();
+
+
+
+
+
+
+
+    klok::pc::MenuResult res;
+    res.wasCancelled = false;
+    res.selectedIndex = -1;
+
+	std::vector<BillSummaryDisplayEntry> productDisplayList;
+    while(true)
+    {
+		productDisplayList.clear();
+
+		gBillAmt = 0;
+		for(BillIter_t iter = gBillData.begin(); iter != gBillData.end(); ++iter)
+		{
+
+			klok::pc::Product selected;
+
+			if(klok::pc::Product::FromDatabase(getDatabase(),iter->first.c_str(),selected) == 0)
+			{
+				BillSummaryDisplayEntry newEntry;
+				newEntry.id = selected.id;
+				newEntry.code = selected.code;
+				newEntry.short_name = selected.short_name;
+				newEntry.details = iter->second;
+				productDisplayList.push_back(newEntry);
+			}
+
+
+			gBillAmt += iter->second.SalesRate * iter->second.Quantity;
+			printf("%s - { %f,%f }\n", iter->first.c_str() , iter->second.SalesRate , iter->second.Quantity);
+		}
+
+	    char totalAmountLabel[30] = {0};
+	    snprintf(totalAmountLabel,sizeof(totalAmountLabel) - 1 , "Total Amt : %.02f" , gBillAmt);
+
+	    klok::pc::display_sub_range_with_title(productDisplayList, totalAmountLabel, 4, res, &BillSummaryDisplayEntryToString);
+
+	    if(!res.wasCancelled){
+
+
+	    	edit_product_quantity(productDisplayList[res.selectedIndex]);
+	    	if(gBillData.count(productDisplayList[res.selectedIndex].id) == 0){
+
+	    		productDisplayList.erase(productDisplayList.begin() + res.selectedIndex );
+
+	    		if(!productDisplayList.size()) return;
+
+    			gBillAmt = 0;
+
+    			for(BillIter_t iter = gBillData.begin(); iter != gBillData.end(); ++iter)
+				{
+					gBillAmt += iter->second.SalesRate * iter->second.Quantity;
+					printf("%s - { %f,%f }\n", iter->first.c_str() , iter->second.SalesRate , iter->second.Quantity);
+				}
+
+	    	}
+
+
+	    }
+	    else if( klok::pc::KEYS::KEY_F6 == res.lastSpecialKey )
+	    {
+	    	const float add_less_amt = add_less_pos();
+
+			gBillAmt = 0;
+
+			for(BillIter_t iter = gBillData.begin(); iter != gBillData.end(); ++iter)
+			{
+				gBillAmt += iter->second.SalesRate * iter->second.Quantity;
+				printf("%s - { %f,%f }\n", iter->first.c_str() , iter->second.SalesRate , iter->second.Quantity);
+			}
+
+	    	klok::pc::PosBillHeader header;
+
+            header.cust_id = "101001";
+            header.gross_amt = tostr(gBillAmt);
+            header.add_less = tostr(add_less_amt);
+            header.net_amt = tostr(gBillAmt + add_less_amt);
+            header.date_time = getCurrentTime();
+            header.user_id = gUserId;
+            header.device_id = "KLOK01";
+            header.unique_items = tostr(gBillData.size());
+
+
+		    if(klok::pc::PosBillHeader::InsertIntoTable(getDatabase(), header) == 0)
+		    {
+		    	std::string newBillId = "";
+		    	if(klok::pc::PosBillHeader::GetLastBillID(getDatabase(), newBillId ) != 0)
+			    {
+			        printf("newBillId  is not fetch failed\n");
+			        return;
+			    }
+			    else if(newBillId == "")
+			    {
+			        printf("newBillId  is not available\n");
+			        return;
+			    }
+
+			for(BillIter_t iter = gBillData.begin(); iter != gBillData.end(); ++iter)
+			{
+
+				klok::pc::PosBillItem item;
+				item.bill_id = newBillId;
+				item.product_id = tostr(iter->first);
+				item.quantity = tostr(iter->second.Quantity);
+				item.net_amt = tostr(iter->second.SalesRate);
+
+				if(klok::pc::PosBillItem::InsertIntoTable(getDatabase(),item)!= 0 ){
+					printf("adding item to database failed for bill %s\n", newBillId.c_str());
+					return;
+				}
+				else{
+					printf("adding item  {%s} to database for bill %s\n",item.product_id.c_str(),newBillId.c_str());
+				}
+
+
+
+			}
+
+	        lcd::DisplayText(5, 0, "Press Enter to print", 0);
+
+			std::string buff, buff1, buff2, buff3, buff4, buff5,buffx;
+
+	        int x = lk_getkey();
+
+	        if(x == klok::pc::KEYS::KEY_ENTER)
+	        {
+	            prn_open();
+	            if(prn_paperstatus() != 0)
+	            {
+	                lk_dispclr();
+	                lcd::DisplayText(3, 5, "No Paper !", 1);
+	                lk_getkey();
+	                return;
+	            }
+
+	            buff.append(" ");
+	            buff.append(gCompanyName);
+	            buff1.append("");
+	            buff1.append(gCompanyAddress);
+	            buff1.append("\n\n");
+	            buff2.append("      CASH BILL\n");
+	            buff3.append("     Bill No             ");
+	            buff3.append(newBillId);
+	            buff3.append("\n");
+	            buff3.append("     Name                ");
+	            buff3.append("Customer 1\n");
+	            buff3.append("     -------------------------------\n");
+
+				for(int i = 0; i != productDisplayList.size(); i++)
+				{
+
+		            buff3.append("     ");
+		            buff3.append(productDisplayList[i].code + " - " + productDisplayList[i].short_name + " - " +
+		            tostr(productDisplayList[i].details.Quantity) + " X " + tostr(productDisplayList[i].details.SalesRate) + " : " +
+		             tostr(productDisplayList[i].details.Quantity*productDisplayList[i].details.SalesRate) );
+		            buff3.append("\n");
+
+				}
+
+	            buff3.append("     -------------------------------\n");
+	            buff3.append("\n");
+	            buff3.append("     Gross Amount        " + tostr(gBillAmt));
+	            buff3.append("\n");
+	           buffx.append("     Add/Less            " + tostr(add_less_amt));
+	           buffx.append("\n");
+	            buff3.append("     -------------------------------\n");
+	            buff4.append("  CASH       ");
+	            buff4.append(tostr(gBillAmt + add_less_amt));
+	            buff4.append("\n");
+	            buff5.append("     Billing Username    ");
+	            buff5.append(gUserName);
+	            buff5.append("\n");
+	            buff5.append("     -------------------------------\n");
+	            buff5.append("          THANK YOU VISIT AGAIN\n");
+	            buff5.append("           ");
+	            buff5.append(getCurrentTime());
+	            buff5.append("\n");
+
+
+	            lk_dispclr();
+	            lcd::DisplayText(3, 5, "PRINTING BILL", 1);
+
+	            int ret;
+
+	            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+	            returncheck(ret);
+
+	            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+	            returncheck(ret);
+
+	            ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
+	            returncheck(ret);
+
+	            ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+	            returncheck(ret);
+
+	            ret = printer::WriteText(buff4.c_str(), buff4.size(), 2);
+	            returncheck(ret);
+
+				ret = printer::WriteText(buff5.c_str(), buff5.size(), 1);
+	            returncheck(ret);
+
+	            ret = printer::WriteText("\n\n\n", 3, 1);
+	            returncheck(ret);
+	            ret = prn_paper_feed(1);
+	            prn_close();
+
+
+            gBillAmt = 0;
+            gBillData.clear();
+            gAllSelectedProducts.clear();
+
+	            if(ret == -3)
+	            {
+	                printf("out of the paper");
+	            }
+	            else
+	            {
+	                return;
+	            }
+	        }
+	        else if(x == klok::pc::KEYS::KEY_CANCEL)
+	        {
+	            return;
+	        }
+
+
+
+
+		    }
+		    else
+		    {
+    	        printf("failed to InsertIntoTable\n");
+		    }
+
+
+
+
+
+
+
+
+            printf("bill saved\n");
+
+            return;
+
+
+
+
+
+	    }
+	    else
+	    {
+	    	return;
+	    }
+
+	}
+
+}
+
+void ask_product_quantity(const klok::pc::Product& inProduct)
+{
+	lk_dispclr();
+	int res = 0;
+
+	char qty[10] = {0};
+	float scanned =0;
+
+	lcd::DisplayText(2, 0, "Enter Quantity", 0);
+	res = lk_getnumeric(4, 0, (unsigned char*)qty, 10, strlen(qty));
+    if(sscanf(qty, "%f", &scanned) == 1 && res > 0)
+    	{
+    		printf("Quantity Entered%f \n", scanned);
+    		addItemToBill(inProduct,scanned);
+
+    		gBillAmt = 0;
+    		for(BillIter_t iter = gBillData.begin(); iter != gBillData.end(); ++iter){
+    			gBillAmt += iter->second.SalesRate * iter->second.Quantity;
+    			printf("%s - { %f,%f }\n", iter->first.c_str() , iter->second.SalesRate , iter->second.Quantity);
+    		}
+    	}
+
+}
+
 void POS()
 {
     printf("POS Activity\n");
     lk_dispclr();
-    lcd::DisplayText(3, 5, "Access Denied!", 1);
-    lk_getkey();
+    gBillData.clear();
+    std::vector<klok::pc::Product> allProducts;
+    if(klok::pc::Product::GetAllFromDatabase(getDatabase(), allProducts, 500) == 0)
+    {
+
+    	while(1)
+    	{
+
+	    	// Debug
+	        for(int i = 0; i != allProducts.size(); i++)
+	        {
+	            printf("ProductId :%s\n", allProducts[i].id.c_str());
+	            printf("ProductName :%s\n", allProducts[i].name.c_str());
+	        }
+
+	        klok::pc::MenuResult res;
+	        res.wasCancelled = false;
+	        res.selectedIndex = -1;
+
+	        char totalAmountLabel[30] = {0};
+	        snprintf(totalAmountLabel,sizeof(totalAmountLabel) - 1 , "Total Amt : %.02f" , gBillAmt);
+
+	        klok::pc::display_sub_range_with_title(allProducts, totalAmountLabel, 4, res, &getPosProductDisplayName);
+
+	        if(!res.wasCancelled)
+	        {
+	            gProductName = allProducts[res.selectedIndex].name;
+	            ask_product_quantity(allProducts[res.selectedIndex]);
+	        }
+	        else if(klok::pc::KEYS::KEY_F6 == res.lastSpecialKey)
+	        {
+	        	printf("User wants to proceed to billing\n");
+	        	display_bill_summary();
+	        	printf("User finished with billing\n");
+
+	        }
+	        else
+	        {
+	        	break;
+	        }
+	    }
+
+    }
+    else
+    {
+        printf("failed to GetAllFromDatabase -> getProductDetails \n");
+    }
 }
 
 void Billing()
@@ -1275,6 +1788,134 @@ void CustomerWiseReport()
     }
 }
 
+void POS_Daily_Report(){
+	std::vector<std::string> uniqueDates;
+
+	if(klok::pc::PosBillHeader::ListUniqueDates(getDatabase(),uniqueDates,100) == 0){
+
+		klok::pc::MenuResult res;
+        res.wasCancelled = false;
+        res.selectedIndex = -1;
+
+        klok::pc::display_sub_range(uniqueDates, 5, res, &getPosTransactionDatesDisplayName);
+
+        if(!res.wasCancelled)
+        {
+        	std::string dateToQuery = uniqueDates[res.selectedIndex];
+		
+
+			float dailyTotal = 0;
+			std::vector<klok::pc::PosBillHeader> billsForDate;
+			if(klok::pc::PosBillHeader::GetTransactionsForDate(getDatabase(),billsForDate ,dateToQuery.c_str(),100) == 0)
+			{
+
+			int x = lk_getkey();
+
+	        if(x == klok::pc::KEYS::KEY_ENTER)
+	        {
+
+					std::string buff, buff1, buff2, buff3, buff4, buff5, buffx;
+		            prn_open();
+		            if(prn_paperstatus() != 0)
+		            {
+		                lk_dispclr();
+		                lcd::DisplayText(3, 5, "No Paper !", 1);
+		                lk_getkey();
+		                return;
+		            }
+
+		        
+		        
+
+		            buff.append(" ");
+		            buff.append(gCompanyName);
+		            buff1.append("");
+		            buff1.append(gCompanyAddress);
+		            buff1.append("\n\n");
+		            buff2.append("      Daily Report\n");
+		            buff3.append("     Report Date         :");
+		            buff3.append(dateToQuery);
+		            buff3.append("\n");
+		            buff3.append("     -------------------------------\n");
+
+		            lk_dispclr();
+		            lcd::DisplayText(3, 5, "PRINTING BILL", 1);
+					for (int i = 0; i < billsForDate.size(); ++i)
+					{
+						float net_amt_for_bill = 0;
+
+						sscanf(billsForDate[i].net_amt.c_str(),"%f",&net_amt_for_bill);
+
+						dailyTotal += net_amt_for_bill;
+
+						buff3.append(" " + billsForDate[i].id + "  " + billsForDate[i].date_time + "  :  " + billsForDate[i].net_amt + '\n');
+
+			        }
+
+			        buffx.append("     -------------------------------\n");
+
+			        buffx.append(std::string("    TOTAL          :Rs ")) ;
+			        	buffx.append(tostr(dailyTotal));
+		            int ret;
+
+		            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+		            returncheck(ret);
+
+		            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+		            returncheck(ret);
+
+		            ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
+		            returncheck(ret);
+
+		            ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+		            returncheck(ret);
+
+		            ret = printer::WriteText(buffx.c_str(), buffx.size(), 1);
+		            returncheck(ret);
+
+		            ret = printer::WriteText(buff4.c_str(), buff4.size(), 2);
+		            returncheck(ret);
+
+					ret = printer::WriteText(buff5.c_str(), buff5.size(), 1);
+		            returncheck(ret);
+
+		            ret = printer::WriteText("\n\n\n", 3, 1);
+		            returncheck(ret);
+		            ret = prn_paper_feed(1);
+		            prn_close();
+
+		            if(ret == -3)
+		            {
+		                printf("out of the paper");
+		            }
+		            else
+		            {
+		                return;
+		            }
+
+			        }
+			    
+
+	        else if(x == klok::pc::KEYS::KEY_CANCEL)
+	        {
+	            return;
+	        }
+
+			}
+			}
+
+        
+
+		
+
+
+
+	}
+
+
+}
+
+
 void Reports()
 {
     printf("Reports\n");
@@ -1289,10 +1930,11 @@ void Reports()
         lk_dispclr();
 
         menu.start = 0;
-        menu.maxEntries = 3;
+        menu.maxEntries = 4;
         strcpy(menu.menu[0],"Daily Collection Report");
         strcpy(menu.menu[1],"Consolidated Report");
         strcpy(menu.menu[2],"Customer Wise Report");
+        strcpy(menu.menu[3],"POS Day Report");
 
         while(1)
         {
@@ -1318,6 +1960,9 @@ void Reports()
 
                 case 3:
                     CustomerWiseReport();
+                    break;
+                case 4:
+                    POS_Daily_Report();
                     break;
                 }
                 break;

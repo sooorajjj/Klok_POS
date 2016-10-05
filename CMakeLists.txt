@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 2.8)
 cmake_policy(SET CMP0015 NEW)
 project(KlokPOS)
 
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=armv5te -mtune=arm926ej-s -msoft-float -mfloat-abi=soft")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv5te -mtune=arm926ej-s -msoft-float -mfloat-abi=soft")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
 include_directories(
   "lib/visiontek/inc"

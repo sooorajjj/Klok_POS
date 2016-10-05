@@ -25,8 +25,6 @@ namespace klok
         class User
         {
         public:
-            User() {}
-            virtual ~User() {}
 
             std::string id, name, password, company_id, company_name, company_address;
 
@@ -49,8 +47,6 @@ namespace klok
         class Customer
         {
         public:
-            Customer() {}
-            virtual ~Customer() {}
 
             std::string id, name,contact, cur_amt, sub_amt, due_amt;
 
@@ -75,8 +71,6 @@ namespace klok
         class Transaction
         {
         public:
-            Transaction() {}
-            virtual ~Transaction() {}
 
             std::string trans_id, cust_id, user_id, gross_amt, add_less, net_amt, date_time;
 
@@ -112,16 +106,106 @@ namespace klok
             };
         };
 
+        class Product
+        {
+        public:
+
+            std::string id, name, short_name, code, sales_rate;
+
+            static int32_t GetAllFromDatabase(SQLite::Database& db, std::vector<Product>& outProducts, uint32_t maxToRead);
+            static int32_t FromDatabase(SQLite::Database& db, const char* id, Product& outProduct);
+            static int32_t CreateTable(SQLite::Database& db, bool dropIfExist);
+
+            struct Queries
+            {
+                static const char* TABLE_NAME;
+                static const char* GET_ALL_QUERY;
+                static const char* CREATE_PRODUCT_TABLE_QUERY;
+                static const char* DROP_PRODUCT_TABLE_QUERY;
+                static const char* SELECT_PRODUCT_WITH_ID_FROM_TABLE;
+
+            };
+        };
+
+        class PosBillHeader
+        {
+        public:
+
+            std::string id , cust_id, gross_amt, add_less , net_amt, date_time , user_id, device_id , unique_items;
+
+            static int32_t FromDatabase(SQLite::Database& db, const char* id, PosBillHeader& outPosBillHeader);
+
+            static int32_t CreateTable(SQLite::Database& db, bool dropIfExist);
+
+            static int32_t GetAllFromDatabase(SQLite::Database& db, std::vector<PosBillHeader>& outPosBillHeaders, uint32_t maxToRead);
+
+            static int32_t InsertIntoTable(SQLite::Database& db, const PosBillHeader& toInsert);
+
+            static int32_t GetLastBillID(SQLite::Database& db, std::string& outID);
+
+            static int32_t GetTransactionsForDate(SQLite::Database& db, std::vector<PosBillHeader>& outBills, const char * date, uint32_t maxToRead);
+            
+            static int32_t ListUniqueDates(SQLite::Database& db, std::vector<std::string>& dates_unique, uint32_t maxToRead);
+
+
+
+            struct Queries
+            {
+                static const char* TABLE_NAME;
+                static const char* GET_ALL_QUERY;
+                static const char* CREATE_POS_BILL_HEADER_TABLE_QUERY;
+                static const char* DROP_POS_BILL_HEADER_TABLE_QUERY;
+                static const char* SELECT_POS_BILL_HEADER_WITH_ID_FROM_TABLE;
+                static const char* INSERT_INTO_TABLE;
+                static const char* GET_LAST_POS_BILL_HEADER_ID_FROM_TABLE;
+                static const char* GET_ALL_FOR_DATE;
+                static const char* LIST_ALL_DATES;
+
+            };
+        };
+
+        class PosBillItem
+        {
+        public:
+
+            std::string bill_id, product_id, quantity, net_amt;
+
+            static int32_t FromDatabase(SQLite::Database& db, const char* id, PosBillItem& outPosBillItem);
+            static int32_t CreateTable(SQLite::Database& db, bool dropIfExist);
+            static int32_t GetAllFromDatabase(SQLite::Database& db, std::vector<PosBillItem>& outPosBillItem, uint32_t maxToRead);
+            static int32_t InsertIntoTable(SQLite::Database& db, const PosBillItem& toInsert);
+
+
+
+            struct Queries
+            {
+                static const char* TABLE_NAME;
+                static const char* GET_ALL_QUERY;
+                static const char* CREATE_POS_BILL_ITEM_TABLE_QUERY;
+                static const char* DROP_POS_BILL_ITEM_TABLE_QUERY;
+                static const char* SELECT_POS_BILL_ITEM_WITH_ID_FROM_TABLE;
+                static const char* INSERT_INTO_TABLE;
+
+            };
+        };
+
+        struct POSBillEntry
+        {
+            float Quantity,SalesRate;
+        };
+
         struct MenuResult
         {
             bool wasCancelled;
             size_t selectedIndex;
+            uint8_t lastSpecialKey;
         };
 
         struct KEYS
         {
             static const uint8_t KEY_F2 = 18;
             static const uint8_t KEY_F3 = 19;
+            static const uint8_t KEY_F6 = 22;
             static const uint8_t KEY_ENTER = 0x0f;
             static const uint8_t KEY_CANCEL = 0x0c;
         };
@@ -175,6 +259,8 @@ namespace klok
                 // lk_get key
                 int x = lk_getkey();
 
+                outMenuResult.lastSpecialKey = 0x00;
+
                 if(KEYS::KEY_F2 == x && selected > 0)
                 {
                     --selected;
@@ -196,6 +282,14 @@ namespace klok
                     outMenuResult.wasCancelled = true;
                     printf("User cancelled : %d,%s\n", (int)selected, toStringConverter(all[selected]));
                     return -1;
+                }
+                else if(KEYS::KEY_F6 == x){
+                    outMenuResult.selectedIndex = selected;
+                    outMenuResult.wasCancelled = false;
+                    outMenuResult.lastSpecialKey = KEYS::KEY_F6;
+                    printf("User pressed bill key : %d,%s\n", (int)selected, toStringConverter(all[selected]));
+                    return -1;
+
                 }
                 offset = ((selected / MaximumRowsToDisplay) * MaximumRowsToDisplay);
             }
@@ -250,6 +344,7 @@ namespace klok
 
                 // lk_get key
                 int x = lk_getkey();
+                outMenuResult.lastSpecialKey = 0x00;
 
                 if(KEYS::KEY_F2 == x && selected > 0)
                 {
@@ -272,6 +367,14 @@ namespace klok
                     outMenuResult.wasCancelled = true;
                     printf("User cancelled : %d,%s\n", (int)selected, toStringConverter(all[selected]));
                     return -1;
+                }
+                else if(KEYS::KEY_F6 == x){
+                    outMenuResult.selectedIndex = selected;
+                    outMenuResult.wasCancelled = true;
+                    outMenuResult.lastSpecialKey = KEYS::KEY_F6;
+                    printf("User pressed bill key : %d,%s\n", (int)selected, toStringConverter(all[selected]));
+                    return -1;
+
                 }
                 offset = ((selected / MaximumRowsToDisplay) * MaximumRowsToDisplay);
             }
