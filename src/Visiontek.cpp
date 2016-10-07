@@ -12,7 +12,7 @@ namespace lcd
 {
     void DisplayText(unsigned char line_no, unsigned char column, const char *data, unsigned char font)
     {
-        static unsigned char toDisplayBuffer[250] = {0};
+        static unsigned char toDisplayBuffer[500] = {0};
 
         const int toCopy = std::strlen(data);
         if(toCopy > 0)
@@ -28,7 +28,7 @@ namespace printer
 {
     int WriteText(const char* text2, int len, int font)
     {
-        static unsigned char toDisplayBuffer[250] = {0};
+        static unsigned char toDisplayBuffer[25000] = {0};
 
         const int toCopy = len;
         if(toCopy > 0)

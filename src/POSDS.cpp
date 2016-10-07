@@ -692,13 +692,15 @@ namespace klok
                     PosBillHeader outPosBillHeader;
                     outPosBillHeader.id = query.getColumn(0).getString();
                     outPosBillHeader.cust_id = query.getColumn(1).getString();
-                    outPosBillHeader.gross_amt = query.getColumn(2).getString();
-                    outPosBillHeader.add_less = query.getColumn(3).getString();
-                    outPosBillHeader.net_amt = query.getColumn(4).getString();
-                    outPosBillHeader.user_id = query.getColumn(3).getString();
-                    outPosBillHeader.date_time = query.getColumn(3).getString();
-                    outPosBillHeader.device_id = query.getColumn(3).getString();
-                    outPosBillHeader.unique_items = query.getColumn(3).getString();
+                    outPosBillHeader.user_id = query.getColumn(2).getString();
+                    outPosBillHeader.gross_amt = query.getColumn(3).getString();
+                    outPosBillHeader.add_less = query.getColumn(4).getString();
+                    outPosBillHeader.net_amt = query.getColumn(5).getString();
+                    outPosBillHeader.date_time = query.getColumn(6).getString();
+                    outPosBillHeader.device_id = query.getColumn(7).getString();
+                    outPosBillHeader.unique_items = query.getColumn(8).getString();
+                    outPosBillHeader.is_deleted = query.getColumn(9).getString();
+                    outPosBillHeader.deleted_at = query.getColumn(10).getString();
                     outPosBillHeaders.push_back(outPosBillHeader);
                 }
 
@@ -712,6 +714,40 @@ namespace klok
 
             return 0;
         }
+        int32_t PosBillHeader::GetAllNonDeleted(SQLite::Database& db, std::vector<PosBillHeader>& outPosBillHeaders, uint32_t maxToRead)
+        {
+            try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::GET_ALL_NOT_DELETED);
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    PosBillHeader outPosBillHeader;
+                    outPosBillHeader.id = query.getColumn(0).getString();
+                    outPosBillHeader.cust_id = query.getColumn(1).getString();
+                    outPosBillHeader.user_id = query.getColumn(2).getString();
+                    outPosBillHeader.gross_amt = query.getColumn(3).getString();
+                    outPosBillHeader.add_less = query.getColumn(4).getString();
+                    outPosBillHeader.net_amt = query.getColumn(5).getString();
+                    outPosBillHeader.date_time = query.getColumn(6).getString();
+                    outPosBillHeader.device_id = query.getColumn(7).getString();
+                    outPosBillHeader.unique_items = query.getColumn(8).getString();
+                    outPosBillHeader.is_deleted = query.getColumn(9).getString();
+                    outPosBillHeader.deleted_at = query.getColumn(10).getString();
+                    outPosBillHeaders.push_back(outPosBillHeader);
+                }
+
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::GetAllNonDeleted -> Fatal Error query :%s\n %s\n", PosBillHeader::Queries::GET_ALL_NOT_DELETED, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
 
         int32_t PosBillHeader::CreateTable(SQLite::Database& db,bool dropIfExist)
         {
@@ -753,13 +789,15 @@ namespace klok
                 {
                     outPosBillHeader.id = query.getColumn(0).getString();
                     outPosBillHeader.cust_id = query.getColumn(1).getString();
-                    outPosBillHeader.gross_amt = query.getColumn(2).getString();
-                    outPosBillHeader.add_less = query.getColumn(3).getString();
-                    outPosBillHeader.net_amt = query.getColumn(4).getString();
-                    outPosBillHeader.user_id = query.getColumn(3).getString();
-                    outPosBillHeader.date_time = query.getColumn(3).getString();
-                    outPosBillHeader.device_id = query.getColumn(3).getString();
-                    outPosBillHeader.unique_items = query.getColumn(3).getString();
+                    outPosBillHeader.user_id = query.getColumn(2).getString();
+                    outPosBillHeader.gross_amt = query.getColumn(3).getString();
+                    outPosBillHeader.add_less = query.getColumn(4).getString();
+                    outPosBillHeader.net_amt = query.getColumn(5).getString();
+                    outPosBillHeader.date_time = query.getColumn(6).getString();
+                    outPosBillHeader.device_id = query.getColumn(7).getString();
+                    outPosBillHeader.unique_items = query.getColumn(8).getString();
+                    outPosBillHeader.is_deleted = query.getColumn(9).getString();
+                    outPosBillHeader.deleted_at = query.getColumn(10).getString();
                     return 0;
                 }
             }
@@ -783,6 +821,9 @@ namespace klok
                 query.bind(6, toInsert.date_time);
                 query.bind(7, toInsert.device_id);
                 query.bind(8, toInsert.unique_items);
+                query.bind(9, toInsert.is_deleted);
+                query.bind(10, toInsert.deleted_at);
+
 
                 query.executeStep();
 
@@ -795,6 +836,164 @@ namespace klok
 
             return 0;
         }
+
+        int32_t PosBillHeader::GetLastBillID(SQLite::Database& db, std::string& outID)
+        {
+            try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::GET_LAST_POS_BILL_HEADER_ID_FROM_TABLE);
+
+                if(query.executeStep())
+                {
+                    outID = query.getColumn(0).getString();
+                    return 0;
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::GetLastBillID -> Fatal Error query : %s \n %s\n", PosBillHeader::Queries::GET_LAST_POS_BILL_HEADER_ID_FROM_TABLE, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+
+        int32_t PosBillHeader::ListUniqueDates(SQLite::Database& db, std::vector<std::string>& dates_unique, uint32_t maxToRead)
+        {
+            try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::LIST_ALL_DATES);
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    dates_unique.push_back(query.getColumn(0).getString());
+                }
+
+                return 0;
+
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::⁠⁠⁠ListUniqueDates -> Fatal Error query :%s\n %s\n", PosBillHeader::Queries::LIST_ALL_DATES, e.what());
+                return -1;
+            }
+
+            return 0;
+
+        }
+
+        int32_t PosBillHeader::GetTransactionsForDate(SQLite::Database& db, std::vector<PosBillHeader>& outBills, const char * date, uint32_t maxToRead)
+        {
+
+             try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::GET_ALL_FOR_DATE);
+                query.bind(1, date);
+
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    PosBillHeader outBill;
+                    outBill.id  = query.getColumn(0).getString();
+                    outBill.cust_id   = query.getColumn(1).getString();
+                    outBill.user_id   = query.getColumn(2).getString();
+                    outBill.gross_amt = query.getColumn(3).getString();
+                    outBill.add_less  = query.getColumn(4).getString();
+                    outBill.net_amt   = query.getColumn(5).getString();
+                    outBill.date_time = query.getColumn(6).getString();
+                    outBill.device_id = query.getColumn(7).getString();
+                    outBill.unique_items = query.getColumn(8).getString();
+                    outBill.is_deleted = query.getColumn(9).getString();
+                    outBill.deleted_at = query.getColumn(10).getString();
+                    outBills.push_back(outBill);
+                }
+
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::GetTransactionsForDate -> Fatal Error query :%s\n %s\n", PosBillHeader::Queries::GET_ALL_FOR_DATE, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+        int32_t PosBillHeader::DeleteAllFromTable(SQLite::Database& db)
+        {
+
+            try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::DELETE_ALL_FROM_TABLE);
+                SQLite::Statement query1(db, PosBillHeader::Queries::RESET_PRIMARY_KEY);
+                query.executeStep();
+                query1.executeStep();
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::DeleteAllFromTable -> Fatal Error %s\n%s\n", PosBillHeader::Queries::DELETE_ALL_FROM_TABLE, e.what());
+                return -1;
+            }
+            return 0;
+        }
+
+
+        int32_t PosBillHeader::MarkBillAsDeleted(SQLite::Database& db,const char * bill_id,const char * deletd_at){
+            try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::DELETE_SPECIFIC_BILL);
+                query.bind(1, deletd_at);
+                query.bind(2, bill_id);
+                query.executeStep();
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::MarkBillAsDeleted -> Fatal Error %s\n%s\n", PosBillHeader::Queries::DELETE_SPECIFIC_BILL, e.what());
+                return -1;
+            }
+            return 0;
+
+        }
+
+        int32_t PosBillHeader::ListAllBills(SQLite::Database& db, std::vector<PosBillHeader>& outPosBillHeaders, uint32_t maxToRead)
+        {
+            try
+            {
+                SQLite::Statement query(db, PosBillHeader::Queries::LIST_ALL_BILLS);
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    PosBillHeader outPosBillHeader;
+                    outPosBillHeader.id = query.getColumn(0).getString();
+                    outPosBillHeader.cust_id = query.getColumn(1).getString();
+                    outPosBillHeader.user_id = query.getColumn(2).getString();
+                    outPosBillHeader.gross_amt = query.getColumn(3).getString();
+                    outPosBillHeader.add_less = query.getColumn(4).getString();
+                    outPosBillHeader.net_amt = query.getColumn(5).getString();
+                    outPosBillHeader.date_time = query.getColumn(6).getString();
+                    outPosBillHeader.device_id = query.getColumn(7).getString();
+                    outPosBillHeader.unique_items = query.getColumn(8).getString();
+                    outPosBillHeader.is_deleted = query.getColumn(9).getString();
+                    outPosBillHeader.deleted_at = query.getColumn(10).getString();
+                    outPosBillHeaders.push_back(outPosBillHeader);
+                }
+
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillHeader::ListAllBills -> Fatal Error query :%s\n %s\n", PosBillHeader::Queries::LIST_ALL_BILLS, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
 
         int32_t PosBillItem::GetAllFromDatabase(SQLite::Database& db, std::vector<PosBillItem>& outPosBillItems, uint32_t maxToRead)
         {
@@ -822,6 +1021,7 @@ namespace klok
 
             return 0;
         }
+
 
         int32_t PosBillItem::CreateTable(SQLite::Database& db,bool dropIfExist)
         {
@@ -897,28 +1097,22 @@ namespace klok
             return 0;
         }
 
-        int32_t PosBillHeader::GetLastBillID(SQLite::Database& db, std::string& outID)
+        int32_t PosBillItem::DeleteAllFromTable(SQLite::Database& db)
         {
+
             try
             {
-                SQLite::Statement query(db, PosBillHeader::Queries::GET_LAST_POS_BILL_HEADER_ID_FROM_TABLE);
+                SQLite::Statement query(db, PosBillItem::Queries::DELETE_ALL_FROM_TABLE);
+                SQLite::Statement query1(db, PosBillItem::Queries::RESET_PRIMARY_KEY);
+                query.executeStep();
+                query1.executeStep();
 
-                if(query.executeStep())
-                {
-                    outID = query.getColumn(0).getString();
-                    return 0;
-                }
-                else
-                {
-                    return -1;
-                }
             }
             catch(std::exception& e)
             {
-                std::printf("PosBillHeader::GetLastBillID -> Fatal Error query : %s \n %s\n", PosBillHeader::Queries::GET_LAST_POS_BILL_HEADER_ID_FROM_TABLE, e.what());
+                std::printf("PosBillItem::DeleteAllFromTable -> Fatal Error %s\n%s\n", PosBillItem::Queries::DELETE_ALL_FROM_TABLE, e.what());
                 return -1;
             }
-
             return 0;
         }
 
@@ -971,6 +1165,7 @@ namespace klok
         const char * Transaction::Queries::LIST_ALL_CUSTOMERS = "select  distinct substr(Cust_ID,0,7) from pay_coll_trans where  Cust_ID like '______\%' ";
         const char * Transaction::Queries::TABLE_NAME = "pay_coll_trans";
         const char * Transaction::Queries::SELECT_TRANSACTION_WITH_ID_FROM_TABLE = "SELECT * FROM pay_coll_trans WHERE Trans_No=?";
+
         const char * Transaction::Queries::CREATE_TRANSACTION_TABLE_QUERY =
             "CREATE TABLE pay_coll_trans ("
             "Trans_No       INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
@@ -1018,6 +1213,11 @@ namespace klok
         const char * PosBillHeader::Queries::GET_LAST_POS_BILL_HEADER_ID_FROM_TABLE = "select MAX(Id) from pos_bill_header ";
         const char * PosBillHeader::Queries::GET_ALL_FOR_DATE = "SELECT * FROM pos_bill_header WHERE Date_Time LIKE ? || '\%'";
         const char * PosBillHeader::Queries::LIST_ALL_DATES = "select  distinct substr(Date_Time,0,11) from pos_bill_header where  Date_Time like '____-__-__\%' ORDER BY Id DESC";
+        const char * PosBillHeader::Queries::DELETE_ALL_FROM_TABLE = "DELETE FROM pos_bill_header";
+        const char * PosBillHeader::Queries::RESET_PRIMARY_KEY = "delete from sqlite_sequence where name='pos_bill_header'";
+        const char * PosBillHeader::Queries::LIST_ALL_BILLS = "select * from pos_bill_header ORDER BY Id DESC";
+        const char * PosBillHeader::Queries::DELETE_SPECIFIC_BILL = "update pos_bill_header set Is_Deleted=1,Delete_AT=? where Id=?";
+        const char * PosBillHeader::Queries::GET_ALL_NOT_DELETED = "SELECT * FROM pos_bill_header where Is_Deleted!=1 or Is_Deleted=NULL ORDER BY Id DESC";
 
 
         const char * PosBillHeader::Queries::CREATE_POS_BILL_HEADER_TABLE_QUERY =
@@ -1031,6 +1231,8 @@ namespace klok
             "Date_Time       DATE    NOT NULL,"
             "Device_ID       INT     NOT NULL,"
             "Unique_Items    INT     NOT NULL,"
+            "Is_Deleted      INT     NOT NULL,"
+            "Delete_AT       DATE    NOT NULL,"
             "FOREIGN KEY (Cust_ID) REFERENCES pay_coll_cust(Cust_ID) ON UPDATE CASCADE,"
             "FOREIGN KEY (User_ID) REFERENCES pay_coll_cust(User_ID) ON UPDATE CASCADE );";
 
@@ -1043,8 +1245,10 @@ namespace klok
             " Net_Amt,"
             " Date_Time,"
             " Device_ID,"
-            " Unique_Items) VALUES ("
-            "?, ?, ?, ?, ?, ?, ?, ?);";
+            " Unique_Items,"
+            " Is_Deleted,"
+            " Delete_AT) VALUES ("
+            "?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
 
         // POS Bill Item Queries
@@ -1053,6 +1257,8 @@ namespace klok
         const char * PosBillItem::Queries::GET_ALL_QUERY = "SELECT * FROM pos_bill_item";
         const char * PosBillItem::Queries::SELECT_POS_BILL_ITEM_WITH_ID_FROM_TABLE = "SELECT * FROM pos_bill_item WHERE Id=?";
         const char * PosBillItem::Queries::DROP_POS_BILL_ITEM_TABLE_QUERY = "DROP TABLE pos_bill_item IF EXISTS;";
+        const char * PosBillItem::Queries::DELETE_ALL_FROM_TABLE = "DELETE FROM pos_bill_item";
+        const char * PosBillItem::Queries::RESET_PRIMARY_KEY = "delete from sqlite_sequence where name='pos_bill_item'";
 
         const char * PosBillItem::Queries::CREATE_POS_BILL_ITEM_TABLE_QUERY =
             "CREATE TABLE pos_bill_item ("
@@ -1070,66 +1276,6 @@ namespace klok
             " Quantity,"
             " Net_Amt) VALUES ("
             "?, ?, ?, ?);";
-
-
-        int32_t PosBillHeader::ListUniqueDates(SQLite::Database& db, std::vector<std::string>& dates_unique, uint32_t maxToRead)
-        {
-            try
-            {
-                SQLite::Statement query(db, PosBillHeader::Queries::LIST_ALL_DATES);
-
-                while(query.executeStep() && (maxToRead--))
-                {
-                    dates_unique.push_back(query.getColumn(0).getString());
-                }
-
-                return 0;
-
-            }
-            catch(std::exception& e)
-            {
-                std::printf("PosBillHeader::⁠⁠⁠ListUniqueDates -> Fatal Error query :%s\n %s\n", PosBillHeader::Queries::LIST_ALL_DATES, e.what());
-                return -1;
-            }
-
-            return 0;
-
-        }
-
-        int32_t PosBillHeader::GetTransactionsForDate(SQLite::Database& db, std::vector<PosBillHeader>& outBills, const char * date, uint32_t maxToRead)
-        {
-
-             try
-            {
-                SQLite::Statement query(db, PosBillHeader::Queries::GET_ALL_FOR_DATE);
-                query.bind(1, date);
-
-
-                while(query.executeStep() && (maxToRead--))
-                {
-                    PosBillHeader outBill;
-                    outBill.id  = query.getColumn(0).getString();
-                    outBill.cust_id   = query.getColumn(1).getString();
-                    outBill.user_id   = query.getColumn(2).getString();
-                    outBill.gross_amt = query.getColumn(3).getString();
-                    outBill.add_less  = query.getColumn(4).getString();
-                    outBill.net_amt   = query.getColumn(5).getString();
-                    outBill.date_time = query.getColumn(6).getString();
-                    outBill.device_id = query.getColumn(7).getString();
-                    outBill.unique_items = query.getColumn(8).getString();
-                    outBills.push_back(outBill);
-                }
-
-                return 0;
-            }
-            catch(std::exception& e)
-            {
-                std::printf("PosBillHeader::GetTransactionsForDate -> Fatal Error query :%s\n %s\n", PosBillHeader::Queries::GET_ALL_FOR_DATE, e.what());
-                return -1;
-            }
-
-            return 0;
-        }
 
     }
 }

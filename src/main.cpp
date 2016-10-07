@@ -1,5 +1,6 @@
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 #include <ctime>
 #include <stdlib.h>
 #include <SQLiteCpp/SQLiteCpp.h>
@@ -140,6 +141,14 @@ const char* getPosTransactionDisplayName(const klok::pc::Transaction& inTransact
 {
     return inTransaction.trans_id.c_str();
 }
+
+const char* getPosBillDisplayName(const klok::pc::PosBillHeader& inPosBillHeader)
+{
+	const std::string dateTimeTrimmed = inPosBillHeader.date_time.substr(5);
+    std::string bill_list = inPosBillHeader.id + " : " + dateTimeTrimmed.substr(0, dateTimeTrimmed.size() - 3);
+    return bill_list.c_str();
+}
+
 const char* getPosTransactionDatesDisplayName(const std::string & inDate)
 {
     return inDate.c_str();
@@ -699,8 +708,8 @@ void display_bill_summary()
 
 	    klok::pc::display_sub_range_with_title(productDisplayList, totalAmountLabel, 4, res, &BillSummaryDisplayEntryToString);
 
-	    if(!res.wasCancelled){
-
+	    if(!res.wasCancelled)
+	    {
 
 	    	edit_product_quantity(productDisplayList[res.selectedIndex]);
 	    	if(gBillData.count(productDisplayList[res.selectedIndex].id) == 0){
@@ -743,6 +752,8 @@ void display_bill_summary()
             header.user_id = gUserId;
             header.device_id = "KLOK01";
             header.unique_items = tostr(gBillData.size());
+            header.is_deleted = "0";
+            header.deleted_at = "";
 
 
 		    if(klok::pc::PosBillHeader::InsertIntoTable(getDatabase(), header) == 0)
@@ -780,116 +791,102 @@ void display_bill_summary()
 
 			}
 
-	        lcd::DisplayText(5, 0, "Press Enter to print", 0);
-
 			std::string buff, buff1, buff2, buff3, buff4, buff5,buffx;
 
-	        int x = lk_getkey();
+            prn_open();
+            if(prn_paperstatus() != 0)
+            {
+                lk_dispclr();
+                lcd::DisplayText(3, 5, "No Paper !", 1);
+                lk_getkey();
+                return;
+            }
 
-	        if(x == klok::pc::KEYS::KEY_ENTER)
-	        {
-	            prn_open();
-	            if(prn_paperstatus() != 0)
-	            {
-	                lk_dispclr();
-	                lcd::DisplayText(3, 5, "No Paper !", 1);
-	                lk_getkey();
-	                return;
-	            }
+            buff.append(" ");
+            buff.append(gCompanyName);
+            buff1.append("");
+            buff1.append(gCompanyAddress);
+            buff1.append("\n\n");
+            buff2.append("      CASH BILL\n");
+            buff3.append("     Bill No             ");
+            buff3.append(newBillId);
+            buff3.append("\n");
+            buff3.append("     Name                ");
+            buff3.append("Customer 1\n");
+            buff3.append("     -------------------------------\n");
 
-	            buff.append(" ");
-	            buff.append(gCompanyName);
-	            buff1.append("");
-	            buff1.append(gCompanyAddress);
-	            buff1.append("\n\n");
-	            buff2.append("      CASH BILL\n");
-	            buff3.append("     Bill No             ");
-	            buff3.append(newBillId);
+			for(int i = 0; i != productDisplayList.size(); i++)
+			{
+
+	            buff3.append("     ");
+	            buff3.append(productDisplayList[i].code + " - " + productDisplayList[i].short_name + " - " +
+	            tostr(productDisplayList[i].details.Quantity) + " X " + tostr(productDisplayList[i].details.SalesRate) + " : " +
+	             tostr(productDisplayList[i].details.Quantity*productDisplayList[i].details.SalesRate) );
 	            buff3.append("\n");
-	            buff3.append("     Name                ");
-	            buff3.append("Customer 1\n");
-	            buff3.append("     -------------------------------\n");
 
-				for(int i = 0; i != productDisplayList.size(); i++)
-				{
+			}
 
-		            buff3.append("     ");
-		            buff3.append(productDisplayList[i].code + " - " + productDisplayList[i].short_name + " - " +
-		            tostr(productDisplayList[i].details.Quantity) + " X " + tostr(productDisplayList[i].details.SalesRate) + " : " +
-		             tostr(productDisplayList[i].details.Quantity*productDisplayList[i].details.SalesRate) );
-		            buff3.append("\n");
-
-				}
-
-	            buff3.append("     -------------------------------\n");
-	            buff3.append("\n");
-	            buff3.append("     Gross Amount        " + tostr(gBillAmt));
-	            buff3.append("\n");
-	           buffx.append("     Add/Less            " + tostr(add_less_amt));
-	           buffx.append("\n");
-	            buff3.append("     -------------------------------\n");
-	            buff4.append("  CASH       ");
-	            buff4.append(tostr(gBillAmt + add_less_amt));
-	            buff4.append("\n");
-	            buff5.append("     Billing Username    ");
-	            buff5.append(gUserName);
-	            buff5.append("\n");
-	            buff5.append("     -------------------------------\n");
-	            buff5.append("          THANK YOU VISIT AGAIN\n");
-	            buff5.append("           ");
-	            buff5.append(getCurrentTime());
-	            buff5.append("\n");
+            buff3.append("     -------------------------------\n");
+            buff3.append("\n");
+            buff3.append("     Gross Amount        " + tostr(gBillAmt));
+            buff3.append("\n");
+            buffx.append("     Add/Less            " + tostr(add_less_amt));
+            buffx.append("\n");
+            buff3.append("     -------------------------------\n");
+            buff4.append("  CASH       ");
+            buff4.append(tostr(gBillAmt + add_less_amt));
+            buff4.append("\n");
+            buff5.append("     Billing Username    ");
+            buff5.append(gUserName);
+            buff5.append("\n");
+            buff5.append("     -------------------------------\n");
+            buff5.append("          THANK YOU VISIT AGAIN\n");
+            buff5.append("           ");
+            buff5.append(getCurrentTime());
+            buff5.append("\n");
 
 
-	            lk_dispclr();
-	            lcd::DisplayText(3, 5, "PRINTING BILL", 1);
+            lk_dispclr();
+            lcd::DisplayText(3, 5, "PRINTING BILL", 1);
 
-	            int ret;
+            int ret;
 
-	            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
-	            returncheck(ret);
+            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+            returncheck(ret);
 
-	            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
-	            returncheck(ret);
+            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+            returncheck(ret);
 
-	            ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
-	            returncheck(ret);
+            ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
+            returncheck(ret);
 
-	            ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
-	            returncheck(ret);
+            ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+            returncheck(ret);
 
-	            ret = printer::WriteText(buff4.c_str(), buff4.size(), 2);
-	            returncheck(ret);
+            ret = printer::WriteText(buff4.c_str(), buff4.size(), 2);
+            returncheck(ret);
 
-				ret = printer::WriteText(buff5.c_str(), buff5.size(), 1);
-	            returncheck(ret);
+			ret = printer::WriteText(buff5.c_str(), buff5.size(), 1);
+            returncheck(ret);
 
-	            ret = printer::WriteText("\n\n\n", 3, 1);
-	            returncheck(ret);
-	            ret = prn_paper_feed(1);
-	            prn_close();
+            ret = printer::WriteText("\n\n\n", 3, 1);
+            returncheck(ret);
+            ret = prn_paper_feed(1);
+            prn_close();
 
 
             gBillAmt = 0;
             gBillData.clear();
             gAllSelectedProducts.clear();
 
-	            if(ret == -3)
-	            {
-	                printf("out of the paper");
-	            }
-	            else
-	            {
-	                return;
-	            }
-	        }
-	        else if(x == klok::pc::KEYS::KEY_CANCEL)
-	        {
-	            return;
-	        }
-
-
-
+            if(ret == -3)
+            	{
+                printf("out of the paper");
+            	}
+            else
+            	{
+                return;
+            	}
 
 		    }
 		    else
@@ -897,20 +894,9 @@ void display_bill_summary()
     	        printf("failed to InsertIntoTable\n");
 		    }
 
-
-
-
-
-
-
-
             printf("bill saved\n");
 
             return;
-
-
-
-
 
 	    }
 	    else
@@ -1809,10 +1795,10 @@ void POS_Daily_Report(){
 			if(klok::pc::PosBillHeader::GetTransactionsForDate(getDatabase(),billsForDate ,dateToQuery.c_str(),100) == 0)
 			{
 
-			int x = lk_getkey();
+				int x = lk_getkey();
 
-	        if(x == klok::pc::KEYS::KEY_ENTER)
-	        {
+		        if(x == klok::pc::KEYS::KEY_ENTER)
+		        {
 
 					std::string buff, buff1, buff2, buff3, buff4, buff5, buffx;
 		            prn_open();
@@ -1824,15 +1810,13 @@ void POS_Daily_Report(){
 		                return;
 		            }
 
-		        
-		        
 
 		            buff.append(" ");
 		            buff.append(gCompanyName);
 		            buff1.append("");
 		            buff1.append(gCompanyAddress);
 		            buff1.append("\n\n");
-		            buff2.append("      Daily Report\n");
+		            buff2.append("    Daily Report\n");
 		            buff3.append("     Report Date         :");
 		            buff3.append(dateToQuery);
 		            buff3.append("\n");
@@ -1893,25 +1877,115 @@ void POS_Daily_Report(){
 		                return;
 		            }
 
-			        }
-			    
+		        } 
+		        else if(x == klok::pc::KEYS::KEY_CANCEL)
+		        {
+		            return;
+		        }
 
-	        else if(x == klok::pc::KEYS::KEY_CANCEL)
+			}
+		}
+	}
+}
+
+void POS_Total_Report()
+{
+	float dailyTotal = 0;
+	std::vector<klok::pc::PosBillHeader> allBills;
+    if(klok::pc::PosBillHeader::GetAllFromDatabase(getDatabase(), allBills, 1000) == 0)
+    {
+
+
+		int x = lk_getkey();
+
+        if(x == klok::pc::KEYS::KEY_ENTER)
+        {
+
+			std::string buff, buff1, buff2, buff3, buffx;
+            prn_open();
+            if(prn_paperstatus() != 0)
+            {
+                lk_dispclr();
+                lcd::DisplayText(3, 5, "No Paper !", 1);
+                lk_getkey();
+                return;
+            }
+
+
+            buff.append(" ");
+            buff.append(gCompanyName);
+            buff1.append("");
+            buff1.append(gCompanyAddress);
+            buff1.append("\n\n");
+            buff2.append("    Total Report\n");
+            buff3.append("\n");
+            buff3.append("     -------------------------------\n");
+
+            lk_dispclr();
+            lcd::DisplayText(3, 5, "PRINTING BILL", 1);
+            for(int i = 0; i != allBills.size(); i++)
 	        {
-	            return;
+	            printf("BillId :%s", allBills[i].id.c_str());
+	            printf(" billDate :%s", allBills[i].date_time.c_str());
+	            printf(" billAmt :%s\n", allBills[i].net_amt.c_str());
+
+	            float net_amt_for_bill = 0;
+
+				sscanf(allBills[i].net_amt.c_str(),"%f",&net_amt_for_bill);
+
+				dailyTotal += net_amt_for_bill;
+				buff3.append(" " + allBills[i].id + "  " + allBills[i].date_time + "  :  " + allBills[i].net_amt + '\n');
+
+
 	        }
 
-			}
-			}
+	        buffx.append("     -------------------------------\n");
 
-        
+	        buffx.append(std::string("    TOTAL          :Rs ")) ;
+        	buffx.append(tostr(dailyTotal));
+            int ret;
 
-		
+            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+            returncheck(ret);
+
+            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+            returncheck(ret);
+
+            ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
+            returncheck(ret);
+
+            ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+            returncheck(ret);
+
+            ret = printer::WriteText(buffx.c_str(), buffx.size(), 1);
+            returncheck(ret);
+
+            ret = printer::WriteText("\n\n\n", 3, 1);
+            returncheck(ret);
+            ret = prn_paper_feed(1);
+            prn_close();
+
+            if(ret == -3)
+            {
+                printf("out of the paper");
+            }
+            else
+            {
+                return;
+            }
+
+        } 
+        else if(x == klok::pc::KEYS::KEY_CANCEL)
+        {
+            return;
+        }
 
 
-
-	}
-
+    }
+    else
+    {
+        printf("failed to GetAllFromDatabase -> getCustomerDetails \n");
+    }
 
 }
 
@@ -1930,11 +2004,12 @@ void Reports()
         lk_dispclr();
 
         menu.start = 0;
-        menu.maxEntries = 4;
+        menu.maxEntries = 5;
         strcpy(menu.menu[0],"Daily Collection Report");
         strcpy(menu.menu[1],"Consolidated Report");
         strcpy(menu.menu[2],"Customer Wise Report");
         strcpy(menu.menu[3],"POS Day Report");
+        strcpy(menu.menu[4],"POS Total Report");
 
         while(1)
         {
@@ -1964,6 +2039,9 @@ void Reports()
                 case 4:
                     POS_Daily_Report();
                     break;
+                case 5:
+                	POS_Total_Report();
+                	break;
                 }
                 break;
             }
@@ -2257,10 +2335,158 @@ void Import()
         }
 }
 
-// void Logout(){
+void ClearBillTask()
+{
 
-// 	main();
-// }
+	lk_dispclr();
+	lcd::DisplayText(1, 0, "Do you want to Clear all BIlls", 0);
+	lcd::DisplayText(4, 0, "Press Enter to Clear else Press Cancel to go back", 0);
+
+	int x = lk_getkey();
+
+    if(x == klok::pc::KEYS::KEY_ENTER)
+    {
+
+    	if(klok::pc::PosBillItem::DeleteAllFromTable(getDatabase())==0 && klok::pc::PosBillHeader::DeleteAllFromTable(getDatabase())==0)
+    	{
+	        lk_dispclr();
+			lcd::DisplayText(3, 1, "Success!", 1);
+			lk_getkey();
+    	}
+    	else
+    	{
+    		printf("Failed to detele PosBillItem::DeleteAllFromTable\n");
+    	}
+
+    }
+    else if (x == klok::pc::KEYS::KEY_CANCEL)
+    {
+    	return;
+    }
+
+}
+
+void ClearBill()
+{
+	if(gUserId == "101010" )
+	{
+		ClearBillTask();
+
+	}
+	else
+	{
+
+		lk_dispclr();
+		lcd::DisplayText(2, 0, "Admin Password Please!", 0);
+
+		int res = 0;
+        char pwd[10] = {0};	
+        res = lk_getpassword((unsigned char*)pwd, 4, 9);
+        if(res > 0)
+        {
+            pwd[res]='\0';
+
+	        if(pwd == tostr(123456))
+	        {
+
+				ClearBillTask();
+	        }
+	        else
+	        {
+				lk_dispclr();
+				lcd::DisplayText(3, 0, "Sorry Wrong password!", 0);
+				lk_getkey();
+
+				return;
+	        }
+	    }
+	}
+}
+
+void DeleteBillTask()
+{
+
+	std::vector<klok::pc::PosBillHeader> allBills;
+    if(klok::pc::PosBillHeader::GetAllNonDeleted(getDatabase(), allBills, 1000) == 0)
+    {
+        klok::pc::MenuResult res;
+        res.wasCancelled = false;
+        res.selectedIndex = -1;
+
+        klok::pc::display_sub_range(allBills, 5, res, &getPosBillDisplayName);
+
+        if(!res.wasCancelled)
+        {
+			lk_dispclr();
+			lcd::DisplayText(1, 0, "Do you want to Delete this BIll", 0);
+			lcd::DisplayText(4, 0, "Press F2 to Delete / Press Enter to return", 0);
+
+			int x = lk_getkey();
+
+		    if(x == klok::pc::KEYS::KEY_F2)
+		    {
+
+		    	if(klok::pc::PosBillHeader::MarkBillAsDeleted(getDatabase(), allBills[res.selectedIndex].id.c_str(), getCurrentTime().c_str())==0)
+		    	{
+	    			printf("Bill Deleted succfully!%s\n", allBills[res.selectedIndex].id.c_str());
+		    	}
+		    	else
+		    	{
+		    		printf("Failed to detele PosBillItem::DeleteAllFromTable\n");
+		    	}
+
+		    }
+		    else if (x == klok::pc::KEYS::KEY_ENTER)
+		    {
+		    	return;
+		    }
+        }
+
+    }
+    else
+    {
+        printf("failed to ListAllBills \n");
+    }
+
+
+}
+
+void DeleteBill()
+{
+	if(gUserId == "101010" )
+	{
+		DeleteBillTask();
+
+	}
+	else
+	{
+
+		lk_dispclr();
+		lcd::DisplayText(2, 0, "Admin Password Please!", 0);
+
+		int res = 0;
+        char pwd[10] = {0};	
+        res = lk_getpassword((unsigned char*)pwd, 4, 9);
+        if(res > 0)
+        {
+            pwd[res]='\0';
+
+	        if(pwd == tostr(123456))
+	        {
+
+				DeleteBillTask();
+	        }
+	        else
+	        {
+				lk_dispclr();
+				lcd::DisplayText(3, 0, "Sorry Wrong password!", 0);
+				lk_getkey();
+
+				return;
+	        }
+	    }
+	}
+}
 
 void Settings()
 {
@@ -2276,11 +2502,12 @@ void Settings()
         lk_dispclr();
 
         menu.start = 0;
-        menu.maxEntries = 2;
+        menu.maxEntries = 4;
         strcpy(menu.menu[0],"Export");
         strcpy(menu.menu[1],"Import");
-        // strcpy(menu.menu[2],"Logout");
-
+        strcpy(menu.menu[2],"Clear Bill");
+        strcpy(menu.menu[3],"Delete Bill");
+        // strcpy(menu.menu[4],"Logout");
         while(1)
         {
             lk_dispclr();
@@ -2289,23 +2516,32 @@ void Settings()
 
             switch(opt)
             {
-            case CANCEL:
-                return;
+	            case CANCEL:
+	                return;
 
-            case ENTER:
+	            case ENTER:
+
                 switch(selItem + 1)
                 {
-                case 1:
-                    Export();
-                    break;
+	                case 1:
+	                    Export();
+	                    break;
 
-                case 2:
-                    Import();
-                    break;
+	                case 2:
+	                    Import();
+	                    break;
 
-                // case 3:
-                //     Logout();
-                //     break;
+	                case 3:
+	                    ClearBill();
+	                    break;
+
+                    case 4:
+                    	DeleteBill();
+                    	break;
+
+                	// case 5:
+                    	// Login();
+                    	// break;
                 }
                 break;
             }
@@ -2361,50 +2597,9 @@ void main_menu(const char* user, const char* pwd)
     }
 }
 
-void checkDatabaseFile()
+void Login()
 {
-    //emtpy?
-}
-
-int main(int argc, const char* argv[])
-{
-    MENU_T menu;
-    int opt = 0;
-    int selItem = 0;
-    int acceptKbdEvents = 0;
-
-    lk_open();
-    mscr_open();
-    lk_dispclr();
-    lk_dispfont(&(X6x8_bits[0]), 6);
-    lk_lcdintensity(24);
-
-    SQLite::Database& db = getDatabase();
-
-    lcd::DisplayText(0, 0, "Klok Innovations", 1);
-    lcd::DisplayText(4, 0, "  F1   F2   F3   F4", 0);
-    lk_dispbutton((unsigned char*)"Home", (unsigned char*)"Up  ", (unsigned char*)"Down", (unsigned char*)"End ");
-    lk_buzzer(2);
-
-    char autobuf[80] = {0};
-    char buff[80] = {0};
-    struct tm intim;
-    sprintf(autobuf, "%s-%02d%02d%02d%02d%02d%04d.txt", buff, intim.tm_hour, intim.tm_min, intim.tm_sec, intim.tm_mday, intim.tm_mon + 1, intim.tm_year + 1900);
-    printf("Date-Time : %s\n", getCurrentTime().c_str());
-
-    while(1)
-    {
-        int key1 = lk_getkey();
-        if(key1 != 0xff)
-            break;
-    }
-
-    lk_dispclr();
-    strcpy(menu.title, "Login");
-
-    lk_bkl_timeout(20);
-
-    int res = 0;
+	int res = 0;
 
     while(1)
     {
@@ -2460,6 +2655,48 @@ int main(int argc, const char* argv[])
             }
         }
 
-        AGAIN_ASK_USER_DETAILS: while(false); //! REALLY? A GOTO? BAD! BAD! BAD!
+        AGAIN_ASK_USER_DETAILS: while(false);
     }
+}
+
+
+int main(int argc, const char* argv[])
+{
+    MENU_T menu;
+    int opt = 0;
+    int selItem = 0;
+    int acceptKbdEvents = 0;
+
+    lk_open();
+    mscr_open();
+    lk_dispclr();
+    lk_dispfont(&(X6x8_bits[0]), 6);
+    lk_lcdintensity(24);
+
+    SQLite::Database& db = getDatabase();
+
+    lcd::DisplayText(0, 0, "Klok Innovations", 1);
+    lcd::DisplayText(4, 0, "  F1   F2   F3   F4", 0);
+    lk_dispbutton((unsigned char*)"Home", (unsigned char*)"Up  ", (unsigned char*)"Down", (unsigned char*)"End ");
+    lk_buzzer(2);
+
+    char autobuf[80] = {0};
+    char buff[80] = {0};
+    struct tm intim;
+    sprintf(autobuf, "%s-%02d%02d%02d%02d%02d%04d.txt", buff, intim.tm_hour, intim.tm_min, intim.tm_sec, intim.tm_mday, intim.tm_mon + 1, intim.tm_year + 1900);
+
+    while(1)
+    {
+        int key1 = lk_getkey();
+        if(key1 != 0xff)
+            break;
+    }
+
+    lk_dispclr();
+    strcpy(menu.title, "Login");
+
+    lk_bkl_timeout(20);
+
+    Login();
+    
 }

@@ -131,7 +131,7 @@ namespace klok
         {
         public:
 
-            std::string id , cust_id, gross_amt, add_less , net_amt, date_time , user_id, device_id , unique_items;
+            std::string id , cust_id, gross_amt, add_less , net_amt, date_time , user_id, device_id , unique_items, is_deleted, deleted_at;
 
             static int32_t FromDatabase(SQLite::Database& db, const char* id, PosBillHeader& outPosBillHeader);
 
@@ -147,6 +147,13 @@ namespace klok
             
             static int32_t ListUniqueDates(SQLite::Database& db, std::vector<std::string>& dates_unique, uint32_t maxToRead);
 
+            static int32_t DeleteAllFromTable(SQLite::Database& db);
+
+            static int32_t MarkBillAsDeleted(SQLite::Database& db,const char * bill_id,const char * deletd_at);
+
+            static int32_t ListAllBills(SQLite::Database& db, std::vector<PosBillHeader>& outPosBillHeaders, uint32_t maxToRead);
+
+            static int32_t GetAllNonDeleted(SQLite::Database& db, std::vector<PosBillHeader>& outPosBillHeaders, uint32_t maxToRead);
 
 
             struct Queries
@@ -160,7 +167,11 @@ namespace klok
                 static const char* GET_LAST_POS_BILL_HEADER_ID_FROM_TABLE;
                 static const char* GET_ALL_FOR_DATE;
                 static const char* LIST_ALL_DATES;
-
+                static const char* DELETE_ALL_FROM_TABLE;
+                static const char* RESET_PRIMARY_KEY;
+                static const char* LIST_ALL_BILLS;
+                static const char* DELETE_SPECIFIC_BILL;
+                static const char* GET_ALL_NOT_DELETED;
             };
         };
 
@@ -174,7 +185,7 @@ namespace klok
             static int32_t CreateTable(SQLite::Database& db, bool dropIfExist);
             static int32_t GetAllFromDatabase(SQLite::Database& db, std::vector<PosBillItem>& outPosBillItem, uint32_t maxToRead);
             static int32_t InsertIntoTable(SQLite::Database& db, const PosBillItem& toInsert);
-
+            static int32_t DeleteAllFromTable(SQLite::Database& db);
 
 
             struct Queries
@@ -185,7 +196,8 @@ namespace klok
                 static const char* DROP_POS_BILL_ITEM_TABLE_QUERY;
                 static const char* SELECT_POS_BILL_ITEM_WITH_ID_FROM_TABLE;
                 static const char* INSERT_INTO_TABLE;
-
+                static const char* DELETE_ALL_FROM_TABLE;
+                static const char* RESET_PRIMARY_KEY;
             };
         };
 
@@ -217,6 +229,15 @@ namespace klok
 
             typedef std::vector<T> InputList;
             typedef typename InputList::const_iterator ListPointer;
+
+            if(!all.size()){
+                outMenuResult.wasCancelled = true;
+                outMenuResult.selectedIndex = 0;
+                lk_dispclr();
+                lcd::DisplayText(3, 2, "No Data!", 0);
+                lk_getkey();
+                return -1;
+            }
 
             ListPointer startPtr = all.begin();
             ListPointer endPtr = all.end();
@@ -302,7 +323,14 @@ namespace klok
 
             typedef std::vector<T> InputList;
             typedef typename InputList::const_iterator ListPointer;
-
+            if(!all.size()){
+                outMenuResult.wasCancelled = true;
+                outMenuResult.selectedIndex = 0;
+                lk_dispclr();
+                lcd::DisplayText(3, 2, "No Data!", 0);
+                lk_getkey();
+                return -1;
+            }
             ListPointer startPtr = all.begin();
             ListPointer endPtr = all.end();
 
