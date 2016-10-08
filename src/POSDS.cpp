@@ -1145,9 +1145,9 @@ namespace klok
             "Cust_ID       INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
             "Cust_Name 	 VARCHAR(20) NOT NULL UNIQUE,"
             "Cust_Contact TEXT NOT NULL,"
-            "Cur_Amt INTEGER NOT NULL,"
-            "Sub_Amt INTEGER NOT NULL,"
-            "Due_Amt INTEGER NOT NULL);";
+            "Cur_Amt REAL NOT NULL,"
+            "Sub_Amt REAL NOT NULL,"
+            "Due_Amt REAL NOT NULL);";
 
 		const char * Customer::Queries::UPDATE_CUSTOMER_BALANCE = "UPDATE pay_coll_cust SET Cur_Amt=? WHERE Cust_ID=?;";
         const char * Customer::Queries::DROP_CUSTOMER_TABLE_QUERY = "DROP TABLE pay_coll_cust IF EXISTS;";
@@ -1171,9 +1171,9 @@ namespace klok
             "Trans_No       INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
             "Cust_ID 		 INT   NOT NULL,"
             "User_ID	  	 INT	 NOT NULL,"
-            "Grs_Amt 		 INT	 NOT NULL,"
-            "Add_Less 		 INT	 NOT NULL,"
-            "Net_Amt 		 INT	 NOT NULL,"
+            "Grs_Amt 		 REAL	 NOT NULL,"
+            "Add_Less 		 REAL	 NOT NULL,"
+            "Net_Amt 		 REAL	 NOT NULL,"
             "Date_Time		 DATE	 NOT NULL, "
             "FOREIGN KEY (Cust_ID) REFERENCES pay_coll_cust(Cust_ID) ON UPDATE CASCADE,"
             "FOREIGN KEY (User_ID) REFERENCES pay_coll_cust(User_ID) ON UPDATE CASCADE );";
@@ -1225,9 +1225,9 @@ namespace klok
             "Id           INTEGER    NOT NULL PRIMARY KEY AUTOINCREMENT,"
             "Cust_ID         INT     NOT NULL,"
             "User_ID         INT     NOT NULL,"
-            "Grs_Amt         INT     NOT NULL,"
-            "Add_Less        INT     NOT NULL,"
-            "Net_Amt         INT     NOT NULL,"
+            "Grs_Amt         REAL     NOT NULL,"
+            "Add_Less        REAL     NOT NULL,"
+            "Net_Amt         REAL     NOT NULL,"
             "Date_Time       DATE    NOT NULL,"
             "Device_ID       INT     NOT NULL,"
             "Unique_Items    INT     NOT NULL,"
@@ -1264,8 +1264,8 @@ namespace klok
             "CREATE TABLE pos_bill_item ("
             "Bill_ID         INT     NOT NULL,"
             "Product_ID      INT     NOT NULL,"
-            "Quantity        INT     NOT NULL,"
-            "Net_Amt         INT     NOT NULL,"
+            "Quantity        REAL     NOT NULL,"
+            "Net_Amt         REAL     NOT NULL,"
             "FOREIGN KEY (Bill_ID) REFERENCES pos_bill_header(Id) ON UPDATE CASCADE,"
             "FOREIGN KEY (Product_ID) REFERENCES pos_product(Product_ID) ON UPDATE CASCADE );";
 
@@ -1276,6 +1276,14 @@ namespace klok
             " Quantity,"
             " Net_Amt) VALUES ("
             "?, ?, ?, ?);";
+
+        // POS Stock Queries
+
+        const char * PosStock::Queries::CREATE_POS_STOCK_TABLE_QUERY =
+            "CREATE TABLE pos_stock ("
+            "Code         INT     NOT NULL,"
+            "Quantity     REAL     NOT NULL,"
+            "Updated_ON   INT     NOT NULL);";
 
     }
 }

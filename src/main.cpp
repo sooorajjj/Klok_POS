@@ -8,6 +8,7 @@
 
 #include "PosDataStructures.hpp"
 #include "Visiontek.hpp"
+#include "Config.hpp"
 
 extern "C"
 {
@@ -44,6 +45,12 @@ namespace
 
 }
 
+
+static void appendToIfFound(std::string & buffer , klok::pos::Configuration::Data_t & data,const char * key){
+    klok::pos::Configuration::Data_t::iterator it = data.find(key);
+    if (it != data.end())
+        buffer.append(it->second + '\n');
+}
 
 static void addItemToBill(const klok::pc::Product & product,float quantity){
 
@@ -245,12 +252,30 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
                 return;
             }
 
-            buff.append(" ");
-            buff.append(gCompanyName);
-            buff1.append("");
-            buff1.append(gCompanyAddress);
-            buff1.append("\n\n");
-            buff2.append("      CASH BILL\n");
+            klok::pos::Configuration c ;
+			klok::pos::Configuration::ParseFromFile("POS.cfg",c);
+
+            appendToIfFound(buff,c.getData(),"Company_Title_L1");
+            appendToIfFound(buff,c.getData(),"Company_Title_L2");
+            appendToIfFound(buff1,c.getData(),"Company_Addr_L1");
+            appendToIfFound(buff1,c.getData(),"Company_Addr_L2");
+            appendToIfFound(buff1,c.getData(),"Company_Addr_L3");
+            appendToIfFound(buff1,c.getData(),"Company_Contact_L1");
+            appendToIfFound(buff1,c.getData(),"Company_Contact_L2");
+            appendToIfFound(buff1,c.getData(),"Company_Email_L1");
+            appendToIfFound(buff2,c.getData(),"Bill_name_1");
+            // appendToIfFound(buff2,c.getData(),"Bill_name_2");
+            // appendToIfFound(buff2,c.getData(),"Bill_name_3");
+            // appendToIfFound(buff2,c.getData(),"Report_name_1");
+            // appendToIfFound(buff2,c.getData(),"Report_name_2");
+            // appendToIfFound(buff2,c.getData(),"Report_name_3");
+            // appendToIfFound(buff2,c.getData(),"Report_name_4");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
+
+            buff1.append("\n");
             buff3.append("     Bill No             ");
             buff3.append(transId);
             buff3.append("\n");
@@ -277,7 +302,10 @@ void insertAndPrint(std::string principleAmtString, std::string addLessString, s
             buff5.append(gUserName);
             buff5.append("\n");
             buff5.append("     -------------------------------\n");
-            buff5.append("          THANK YOU VISIT AGAIN\n");
+            appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
+            appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
+            appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
+            appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
             buff5.append("           ");
             buff5.append(getCurrentTime());
             buff5.append("\n");
@@ -802,12 +830,29 @@ void display_bill_summary()
                 return;
             }
 
-            buff.append(" ");
-            buff.append(gCompanyName);
-            buff1.append("");
-            buff1.append(gCompanyAddress);
-            buff1.append("\n\n");
-            buff2.append("      CASH BILL\n");
+            klok::pos::Configuration c ;
+            klok::pos::Configuration::ParseFromFile("POS.cfg",c);
+
+            appendToIfFound(buff,c.getData(),"Company_Title_L1");
+            appendToIfFound(buff,c.getData(),"Company_Title_L2");
+            appendToIfFound(buff1,c.getData(),"Company_Addr_L1");
+            appendToIfFound(buff1,c.getData(),"Company_Addr_L2");
+            appendToIfFound(buff1,c.getData(),"Company_Addr_L3");
+            appendToIfFound(buff1,c.getData(),"Company_Contact_L1");
+            appendToIfFound(buff1,c.getData(),"Company_Contact_L2");
+            appendToIfFound(buff1,c.getData(),"Company_Email_L1");
+            appendToIfFound(buff2,c.getData(),"Bill_name_1");
+            // appendToIfFound(buff2,c.getData(),"Bill_name_2");
+            // appendToIfFound(buff2,c.getData(),"Bill_name_3");
+            // appendToIfFound(buff2,c.getData(),"Report_name_1");
+            // appendToIfFound(buff2,c.getData(),"Report_name_2");
+            // appendToIfFound(buff2,c.getData(),"Report_name_3");
+            // appendToIfFound(buff2,c.getData(),"Report_name_4");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
+            buff3.append("\n");
             buff3.append("     Bill No             ");
             buff3.append(newBillId);
             buff3.append("\n");
@@ -840,7 +885,10 @@ void display_bill_summary()
             buff5.append(gUserName);
             buff5.append("\n");
             buff5.append("     -------------------------------\n");
-            buff5.append("          THANK YOU VISIT AGAIN\n");
+            appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
+            appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
+            appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
+            appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
             buff5.append("           ");
             buff5.append(getCurrentTime());
             buff5.append("\n");
@@ -1810,13 +1858,29 @@ void POS_Daily_Report(){
 		                return;
 		            }
 
+					klok::pos::Configuration c ;
+					klok::pos::Configuration::ParseFromFile("POS.cfg",c);
 
-		            buff.append(" ");
-		            buff.append(gCompanyName);
-		            buff1.append("");
-		            buff1.append(gCompanyAddress);
-		            buff1.append("\n\n");
-		            buff2.append("    Daily Report\n");
+                    appendToIfFound(buff,c.getData(),"Company_Title_L1");
+                    appendToIfFound(buff,c.getData(),"Company_Title_L2");
+                    appendToIfFound(buff1,c.getData(),"Company_Addr_L1");
+                    appendToIfFound(buff1,c.getData(),"Company_Addr_L2");
+                    appendToIfFound(buff1,c.getData(),"Company_Addr_L3");
+                    appendToIfFound(buff1,c.getData(),"Company_Contact_L1");
+                    appendToIfFound(buff1,c.getData(),"Company_Contact_L2");
+                    appendToIfFound(buff1,c.getData(),"Company_Email_L1");
+                    // appendToIfFound(buff2,c.getData(),"Bill_name_1");
+                    // appendToIfFound(buff2,c.getData(),"Bill_name_2");
+                    // appendToIfFound(buff2,c.getData(),"Bill_name_3");
+                    appendToIfFound(buff2,c.getData(),"Report_name_1");
+                    // appendToIfFound(buff2,c.getData(),"Report_name_2");
+                    // appendToIfFound(buff2,c.getData(),"Report_name_3");
+                    // appendToIfFound(buff2,c.getData(),"Report_name_4");
+                    // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
+                    // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
+                    // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
+                    // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
+                    buff3.append("\n");
 		            buff3.append("     Report Date         :");
 		            buff3.append(dateToQuery);
 		            buff3.append("\n");
@@ -1912,13 +1976,29 @@ void POS_Total_Report()
             }
 
 
-            buff.append(" ");
-            buff.append(gCompanyName);
-            buff1.append("");
-            buff1.append(gCompanyAddress);
-            buff1.append("\n\n");
-            buff2.append("    Total Report\n");
-            buff3.append("\n");
+			klok::pos::Configuration c ;
+			klok::pos::Configuration::ParseFromFile("POS.cfg",c);
+
+            appendToIfFound(buff,c.getData(),"Company_Title_L1");
+            appendToIfFound(buff,c.getData(),"Company_Title_L2");
+            appendToIfFound(buff1,c.getData(),"Company_Addr_L1");
+            appendToIfFound(buff1,c.getData(),"Company_Addr_L2");
+            appendToIfFound(buff1,c.getData(),"Company_Addr_L3");
+            appendToIfFound(buff1,c.getData(),"Company_Contact_L1");
+            appendToIfFound(buff1,c.getData(),"Company_Contact_L2");
+            appendToIfFound(buff1,c.getData(),"Company_Email_L1");
+            // appendToIfFound(buff2,c.getData(),"Bill_name_1");
+            // appendToIfFound(buff2,c.getData(),"Bill_name_2");
+            // appendToIfFound(buff2,c.getData(),"Bill_name_3");
+            appendToIfFound(buff2,c.getData(),"Report_name_2");
+            // appendToIfFound(buff2,c.getData(),"Report_name_2");
+            // appendToIfFound(buff2,c.getData(),"Report_name_3");
+            // appendToIfFound(buff2,c.getData(),"Report_name_4");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
+            buff3.append("\n"); 
             buff3.append("     -------------------------------\n");
 
             lk_dispclr();
@@ -2268,6 +2348,8 @@ void Import()
         {
         	ret=system("mount -t vfat /dev/sda1 /mnt/usb");
 			if (ret==256)
+            ret=system("mount -t vfat /dev/sda2 /mnt/usb");
+            if (ret==256)
 			ret=system("mount -t vfat /dev/sdb1 /mnt/usb");
 			if (ret==256)
     		ret=system("mount -t vfat /dev/sdc1 /mnt/usb");
@@ -2338,75 +2420,44 @@ void Import()
 void ClearBillTask()
 {
 
-	lk_dispclr();
-	lcd::DisplayText(1, 0, "Do you want to Clear all BIlls", 0);
-	lcd::DisplayText(4, 0, "Press Enter to Clear else Press Cancel to go back", 0);
-
-	int x = lk_getkey();
-
-    if(x == klok::pc::KEYS::KEY_ENTER)
-    {
-
-    	if(klok::pc::PosBillItem::DeleteAllFromTable(getDatabase())==0 && klok::pc::PosBillHeader::DeleteAllFromTable(getDatabase())==0)
-    	{
-	        lk_dispclr();
-			lcd::DisplayText(3, 1, "Success!", 1);
-			lk_getkey();
-    	}
-    	else
-    	{
-    		printf("Failed to detele PosBillItem::DeleteAllFromTable\n");
-    	}
-
-    }
-    else if (x == klok::pc::KEYS::KEY_CANCEL)
-    {
-    	return;
-    }
 
 }
 
 void ClearBill()
 {
-	if(gUserId == "101010" )
-	{
-		ClearBillTask();
+    lk_dispclr();
+    lcd::DisplayText(1, 0, "Do you want to Clear all BIlls", 0);
+    lcd::DisplayText(4, 0, "Press Enter to Clear else Press Cancel to go back", 0);
 
-	}
-	else
-	{
+    int x = lk_getkey();
 
-		lk_dispclr();
-		lcd::DisplayText(2, 0, "Admin Password Please!", 0);
+    if(x == klok::pc::KEYS::KEY_ENTER)
+    {
 
-		int res = 0;
-        char pwd[10] = {0};	
-        res = lk_getpassword((unsigned char*)pwd, 4, 9);
-        if(res > 0)
+        if(klok::pc::PosBillItem::DeleteAllFromTable(getDatabase())==0 && klok::pc::PosBillHeader::DeleteAllFromTable(getDatabase())==0)
         {
-            pwd[res]='\0';
+            lk_dispclr();
+            lcd::DisplayText(3, 1, "Success!", 1);
+            lk_getkey();
+        }
+        else
+        {
+            printf("Failed to detele PosBillItem::DeleteAllFromTable\n");
+        }
 
-	        if(pwd == tostr(123456))
-	        {
+    }
+    else if (x == klok::pc::KEYS::KEY_CANCEL)
+    {
+        return;
+    }
 
-				ClearBillTask();
-	        }
-	        else
-	        {
-				lk_dispclr();
-				lcd::DisplayText(3, 0, "Sorry Wrong password!", 0);
-				lk_getkey();
-
-				return;
-	        }
-	    }
-	}
 }
 
-void DeleteBillTask()
-{
 
-	std::vector<klok::pc::PosBillHeader> allBills;
+
+void DeleteBill()
+{
+    std::vector<klok::pc::PosBillHeader> allBills;
     if(klok::pc::PosBillHeader::GetAllNonDeleted(getDatabase(), allBills, 1000) == 0)
     {
         klok::pc::MenuResult res;
@@ -2417,29 +2468,29 @@ void DeleteBillTask()
 
         if(!res.wasCancelled)
         {
-			lk_dispclr();
-			lcd::DisplayText(1, 0, "Do you want to Delete this BIll", 0);
-			lcd::DisplayText(4, 0, "Press F2 to Delete / Press Enter to return", 0);
+            lk_dispclr();
+            lcd::DisplayText(1, 0, "Do you want to Delete this BIll", 0);
+            lcd::DisplayText(4, 0, "Press F2 to Delete / Press Enter to return", 0);
 
-			int x = lk_getkey();
+            int x = lk_getkey();
 
-		    if(x == klok::pc::KEYS::KEY_F2)
-		    {
+            if(x == klok::pc::KEYS::KEY_F2)
+            {
 
-		    	if(klok::pc::PosBillHeader::MarkBillAsDeleted(getDatabase(), allBills[res.selectedIndex].id.c_str(), getCurrentTime().c_str())==0)
-		    	{
-	    			printf("Bill Deleted succfully!%s\n", allBills[res.selectedIndex].id.c_str());
-		    	}
-		    	else
-		    	{
-		    		printf("Failed to detele PosBillItem::DeleteAllFromTable\n");
-		    	}
+                if(klok::pc::PosBillHeader::MarkBillAsDeleted(getDatabase(), allBills[res.selectedIndex].id.c_str(), getCurrentTime().c_str())==0)
+                {
+                    printf("Bill Deleted succfully!%s\n", allBills[res.selectedIndex].id.c_str());
+                }
+                else
+                {
+                    printf("Failed to detele PosBillItem::DeleteAllFromTable\n");
+                }
 
-		    }
-		    else if (x == klok::pc::KEYS::KEY_ENTER)
-		    {
-		    	return;
-		    }
+            }
+            else if (x == klok::pc::KEYS::KEY_ENTER)
+            {
+                return;
+            }
         }
 
     }
@@ -2447,51 +2498,152 @@ void DeleteBillTask()
     {
         printf("failed to ListAllBills \n");
     }
-
-
 }
 
-void DeleteBill()
+void UploadConfig()
 {
-	if(gUserId == "101010" )
-	{
-		DeleteBillTask();
+	lk_dispclr();
+	lcd::DisplayText(2, 0, "Insert the usb device and press ENTER", 0);
+    printf("Import Activity\n");
 
-	}
-	else
-	{
+	int ret=0;
+	FILE *fp;
+    	
+	fp=fopen("/etc/mtab", "r");
+	char str[100]="", flag=0;
 
-		lk_dispclr();
-		lcd::DisplayText(2, 0, "Admin Password Please!", 0);
+		if (fp==NULL)
+		fprintf(stderr, "File open Error\n");
 
-		int res = 0;
-        char pwd[10] = {0};	
-        res = lk_getpassword((unsigned char*)pwd, 4, 9);
-        if(res > 0)
+		 while((fgets(str, 80, fp))!=NULL)
+		{
+       		if((strstr(str, "/mnt/usb")) != NULL)
+			flag=1;
+		}
+
+	fclose(fp);
+
+        int x = lk_getkey();
+
+        if(x == klok::pc::KEYS::KEY_ENTER && flag==1)
         {
-            pwd[res]='\0';
+        	lk_dispclr();
+			lcd::DisplayText(2, 2, "Already Mounted", 1);
+			lcd::DisplayText(4, 0, "Press any key to copy Configuration to device", 0);
 
-	        if(pwd == tostr(123456))
-	        {
-
-				DeleteBillTask();
-	        }
-	        else
-	        {
-				lk_dispclr();
-				lcd::DisplayText(3, 0, "Sorry Wrong password!", 0);
 				lk_getkey();
+				ret=system("cp /mnt/usb/POS.cfg /mnt/jffs2/");
+				
+				lk_dispclr();
+				lcd::DisplayText(3,2,"Copying ....",0);
+				lcd::DisplayText(5,0,"This may take 5-8 seconds",0);
+				sleep(6);
+				
+					if (ret == 0)
+					{
+					lk_dispclr();
+					lcd::DisplayText(3,2,"Copying Successfull",0);
+					lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+	                lk_getkey();
 
-				return;
-	        }
-	    }
-	}
+					lk_dispclr();
+                	lcd::DisplayText(2,2,"Unmounting disk ..",0);
+					ret = system("umount /mnt/usb");
+
+						lk_dispclr();
+						if (ret == 0)
+						{
+						lcd::DisplayText(3,2,"Unmout Successfull",0);
+						}
+						else
+						{
+						lcd::DisplayText(3,2,"Unmounting  Failed....",0);
+		                lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+		                lk_getkey();
+		                }
+		            }
+					else
+					{
+					lcd::DisplayText(3,2,"Copying Failed....",0);
+	                lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+	                ret = system("umount /mnt/usb");
+	                lk_getkey();
+	                }
+	        return ;
+        }
+        else if(x == klok::pc::KEYS::KEY_ENTER && flag==0)
+        {
+        	ret=system("mount -t vfat /dev/sda1 /mnt/usb");
+			if (ret==256)
+			ret=system("mount -t vfat /dev/sdb1 /mnt/usb");
+			if (ret==256)
+    		ret=system("mount -t vfat /dev/sdc1 /mnt/usb");
+			if (ret==256)
+    		ret=system("mount -t vfat /dev/sdd1 /mnt/usb");
+	
+			if ( ret== 0)
+			{
+				lk_dispclr();
+				fprintf(stdout, "mass storage mounted\n");
+				lcd::DisplayText(2, 2, "MOUNT SUCCESS", 1);
+				lcd::DisplayText(4, 0, "Press any key to copy Configuration to device", 0);
+
+				lk_getkey();
+				ret=system("cp /mnt/usb/POS.cfg /mnt/jffs2/");
+				
+				lk_dispclr();
+				lcd::DisplayText(3,2,"Copying ....",0);
+				lcd::DisplayText(5,0,"This may take 5-8 seconds",0);
+				sleep(6);
+				
+					if (ret == 0)
+					{
+					lk_dispclr();
+					lcd::DisplayText(3,2,"Copying Successfull",0);
+					lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+	                lk_getkey();
+
+					lk_dispclr();
+                	lcd::DisplayText(2,2,"Unmounting disk ..",0);
+					ret = system("umount /mnt/usb");
+					lk_dispclr();
+
+						if (ret == 0)
+						{
+						lcd::DisplayText(3,2,"Unmout Successfull",0);
+						}
+						else
+						{
+						lcd::DisplayText(3,2,"Unmounting  Failed....",0);
+		                lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+		                lk_getkey();
+		                }
+		            }
+					else
+					{
+					lcd::DisplayText(3,2,"Copying  Failed....",0);
+	                lcd::DisplayText(5,0,"Press Any Key to Exit",0);
+	                ret = system("umount /mnt/usb");
+	                lk_getkey();
+	                }
+				                
+				return ;
+			}
+			else
+			{
+				lk_dispclr();
+				fprintf(stderr, "Mass storage mounting Failed \n");
+				lcd::DisplayText(3, 2, "MOUNT FAILED", 1);
+                lcd::DisplayText(5, 0, "Press Any Key to Exit", 0);
+                lk_getkey();
+                return ;
+			}
+
+        }	
 }
 
-void Settings()
+void AdminArea()
 {
-    printf("Settings\n");
-
     MENU_T menu;
     int opt = 0;
     int selItem = 0;
@@ -2502,11 +2654,12 @@ void Settings()
         lk_dispclr();
 
         menu.start = 0;
-        menu.maxEntries = 4;
+        menu.maxEntries = 5;
         strcpy(menu.menu[0],"Export");
         strcpy(menu.menu[1],"Import");
-        strcpy(menu.menu[2],"Clear Bill");
-        strcpy(menu.menu[3],"Delete Bill");
+        strcpy(menu.menu[2],"Upload Configuration");
+        strcpy(menu.menu[3],"Clear Bill");
+        strcpy(menu.menu[4],"Delete Bill");
         // strcpy(menu.menu[4],"Logout");
         while(1)
         {
@@ -2516,37 +2669,82 @@ void Settings()
 
             switch(opt)
             {
-	            case CANCEL:
-	                return;
+                case CANCEL:
+                    return;
 
-	            case ENTER:
+                case ENTER:
 
                 switch(selItem + 1)
                 {
-	                case 1:
-	                    Export();
-	                    break;
+                    case 1:
+                        Export();
+                        break;
 
-	                case 2:
-	                    Import();
-	                    break;
+                    case 2:
+                        Import();
+                        break;
 
-	                case 3:
-	                    ClearBill();
-	                    break;
+                    case 3:
+                        UploadConfig();
+                        break;
 
                     case 4:
-                    	DeleteBill();
-                    	break;
+                        ClearBill();
+                        break;
 
-                	// case 5:
-                    	// Login();
-                    	// break;
+                    case 5:
+                        DeleteBill();
+                        break;
+
+                    // case 5:
+                        // Login();
+                        // break;
                 }
                 break;
             }
         }
+    } 
+}
+
+
+void Settings()
+{
+    if(gUserId == "101010" )
+    {
+        AdminArea();
+
     }
+    else
+    {
+
+        lk_dispclr();
+        lcd::DisplayText(2, 0, "Admin Password Please!", 0);
+
+        int res = 0;
+        char pwd[10] = {0}; 
+        res = lk_getpassword((unsigned char*)pwd, 4, 9);
+        if(res > 0)
+        {
+            pwd[res]='\0';
+
+            if(pwd == tostr(123456))
+            {
+
+                AdminArea();
+            }
+            else
+            {
+                lk_dispclr();
+                lcd::DisplayText(3, 0, "Sorry Wrong password!", 0);
+                lk_getkey();
+
+                return;
+            }
+        }
+    }
+    printf("Settings\n");
+
+
 }
 void main_menu(const char* user, const char* pwd)
 {

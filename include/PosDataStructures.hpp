@@ -201,6 +201,22 @@ namespace klok
             };
         };
 
+        class PosStock
+        {
+        public:
+
+            std::string code, quantity, updated_on;
+
+            static int32_t CreateTable(SQLite::Database& db, bool dropIfExist);
+
+            struct Queries
+            {
+                static const char* CREATE_POS_STOCK_TABLE_QUERY;
+
+            };
+        };
+
+
         struct POSBillEntry
         {
             float Quantity,SalesRate;
