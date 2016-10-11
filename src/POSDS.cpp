@@ -672,6 +672,7 @@ namespace klok
                     outProduct.short_name = query.getColumn(2).getString();
                     outProduct.code = query.getColumn(3).getString();
                     outProduct.sales_rate = query.getColumn(4).getString();
+                    outProduct.stock_quantity = query.getColumn(5).getString();
                     return 0;
                 }
             }
@@ -1122,6 +1123,7 @@ namespace klok
             float totals = 0;
 
             SQLite::Statement stmt(db,Queries::GET_TOTAL_SOLD_PER_ITEM);
+            stmt.bind(1,prod);
             try
             {
                 if(!stmt.executeStep()){

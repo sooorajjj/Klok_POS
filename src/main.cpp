@@ -29,9 +29,10 @@ struct Operation {
 };
 
 namespace {
+
 std::string gUserId = "", gUserName = "", gTransId = "", gCustomerId = "",
             gCustomerName = "", gCustomerBalance = "", gCustomerContact = "",
-            gCompanyName = "", gCompanyAddress = "", gProductName = "";
+            gCompanyName = "", gCompanyAddress = "", gProductName = "",gDeviceId = "A";
 
 SQLite::Database* gDatabasePtr = NULL;
 
@@ -558,9 +559,11 @@ void edit_product_quantity(const BillSummaryDisplayEntry& entry) {
 }
 float add_less_pos() {
   lk_dispclr();
-  lcd::DisplayText(2, 5, "Add/Less", 1);
-  lcd::DisplayText(4, 0, "Press F2 to Add, F3 to Less, ENTER to skip", 0);
-
+  lcd::DisplayText(0, 2, "Discount(Round Off)", 0);
+  lcd::DisplayText(1, 8, "Add/Less", 0);
+  lcd::DisplayText(3, 1, "Press F2 to Add Amt", 0);
+  lcd::DisplayText(4, 1, "Press F3 to Less Amt", 0);
+  lcd::DisplayText(5, 4, "ENTER to skip", 0);
   int x = lk_getkey();
   lk_dispclr();
 
@@ -727,7 +730,7 @@ void display_bill_summary() {
           }
         }
 
-        std::string buff, buff1, buff2, buff3, buff4, buff5, buffx;
+        std::string buff, buff1, buff2, buff3, buff4, buff5;
 
         prn_open();
         if (prn_paperstatus() != 0) {
@@ -748,7 +751,10 @@ void display_bill_summary() {
         appendToIfFound(buff1, c.getData(), "Company_Contact_L1");
         appendToIfFound(buff1, c.getData(), "Company_Contact_L2");
         appendToIfFound(buff1, c.getData(), "Company_Email_L1");
+        buff1.append("\n");
         appendToIfFound(buff2, c.getData(), "Bill_name_1");
+        appendToIfFound(buff3, c.getData(), "Bill_Line2_2");
+
         // appendToIfFound(buff2,c.getData(),"Bill_name_2");
         // appendToIfFound(buff2,c.getData(),"Bill_name_3");
         // appendToIfFound(buff2,c.getData(),"Report_name_1");
@@ -760,38 +766,40 @@ void display_bill_summary() {
         // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
         // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
         buff3.append("\n");
-        buff3.append("     Bill No             ");
-        buff3.append(newBillId);
+        buff3.append(" ---------------------------------------\n");
+        buff3.append(" Bill No : ");
+        buff3.append(""+ gDeviceId +newBillId);
+        buff3.append("  Date: " + getCurrentTime());
         buff3.append("\n");
-        buff3.append("     Name                ");
-        buff3.append("Customer 1\n");
-        buff3.append("     -------------------------------\n");
+        buff3.append("   ---------------------------------\n");
+
+        buff3.append("   SL:NO  Itm name  Qty  Rate  Total\n\n");
 
         for (int i = 0; i != productDisplayList.size(); i++) {
-          buff3.append("     ");
-          buff3.append(productDisplayList[i].code + " - " +
-                       productDisplayList[i].short_name + " - " +
-                       tostr(productDisplayList[i].details.Quantity) + " X " +
-                       tostr(productDisplayList[i].details.SalesRate) + " : " +
+          buff3.append("    ");
+          buff3.append(productDisplayList[i].code + "      " +
+                       productDisplayList[i].short_name + "     " +
+                       tostr(productDisplayList[i].details.Quantity) + "  * " +
+                       tostr(productDisplayList[i].details.SalesRate) + " :  " +
                        tostr(productDisplayList[i].details.Quantity *
                              productDisplayList[i].details.SalesRate));
           buff3.append("\n");
         }
 
-        buff3.append("     -------------------------------\n");
+        buff3.append("   ---------------------------------\n");
         buff3.append("\n");
-        buff3.append("     Gross Amount        " + tostr(gBillAmt));
+        buff3.append("   Net Amount               " + tostr(gBillAmt));
         buff3.append("\n");
-        buffx.append("     Add/Less            " + tostr(add_less_amt));
-        buffx.append("\n");
-        buff3.append("     -------------------------------\n");
-        buff4.append("  CASH       ");
+        buff3.append("   Discount(Round Off)      " + tostr(add_less_amt));
+        buff3.append("\n");
+        buff3.append("   ---------------------------------\n");
+        buff4.append("  TOTAL      ");
         buff4.append(tostr(gBillAmt + add_less_amt));
         buff4.append("\n");
-        buff5.append("     Billing Username    ");
+        buff5.append("     User                 ");
         buff5.append(gUserName);
         buff5.append("\n");
-        buff5.append("     -------------------------------\n");
+        buff5.append("   ---------------------------------\n");
         appendToIfFound(buff5, c.getData(), "Print_Footer_L1");
         appendToIfFound(buff5, c.getData(), "Print_Footer_L2");
         appendToIfFound(buff5, c.getData(), "Print_Footer_L3");
@@ -1632,6 +1640,7 @@ void POS_Daily_Report() {
           // appendToIfFound(buff2,c.getData(),"Bill_name_1");
           // appendToIfFound(buff2,c.getData(),"Bill_name_2");
           // appendToIfFound(buff2,c.getData(),"Bill_name_3");
+          buff1.append("\n");
           appendToIfFound(buff2, c.getData(), "Report_name_1");
           // appendToIfFound(buff2,c.getData(),"Report_name_2");
           // appendToIfFound(buff2,c.getData(),"Report_name_3");
@@ -1660,9 +1669,9 @@ void POS_Daily_Report() {
                          billsForDate[i].net_amt + '\n');
           }
 
-          buffx.append("     -------------------------------\n");
+          buff3.append("     -------------------------------\n");
 
-          buffx.append(std::string("    TOTAL          :Rs "));
+          buffx.append(std::string("  TOTAL     :Rs "));
           buffx.append(tostr(dailyTotal));
           int ret;
 
@@ -1678,13 +1687,7 @@ void POS_Daily_Report() {
           ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
           returncheck(ret);
 
-          ret = printer::WriteText(buffx.c_str(), buffx.size(), 1);
-          returncheck(ret);
-
-          ret = printer::WriteText(buff4.c_str(), buff4.size(), 2);
-          returncheck(ret);
-
-          ret = printer::WriteText(buff5.c_str(), buff5.size(), 1);
+          ret = printer::WriteText(buffx.c_str(), buffx.size(), 2);
           returncheck(ret);
 
           ret = printer::WriteText("\n\n\n", 3, 1);
@@ -1711,6 +1714,8 @@ void POS_Total_Report() {
   std::vector<klok::pc::PosBillHeader> allBills;
   if (klok::pc::PosBillHeader::GetAllFromDatabase(getDatabase(), allBills,
                                                   1000) == 0) {
+    lk_dispclr();
+    lcd::DisplayText(1,0,"Press Enter to print",1);
     int x = lk_getkey();
 
     if (x == klok::pc::KEYS::KEY_ENTER) {
@@ -1737,6 +1742,7 @@ void POS_Total_Report() {
       // appendToIfFound(buff2,c.getData(),"Bill_name_1");
       // appendToIfFound(buff2,c.getData(),"Bill_name_2");
       // appendToIfFound(buff2,c.getData(),"Bill_name_3");
+      buff2.append("\n");
       appendToIfFound(buff2, c.getData(), "Report_name_2");
       // appendToIfFound(buff2,c.getData(),"Report_name_2");
       // appendToIfFound(buff2,c.getData(),"Report_name_3");
@@ -1746,7 +1752,8 @@ void POS_Total_Report() {
       // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
       // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
       buff3.append("\n");
-      buff3.append("     -------------------------------\n");
+      buff3.append(" ------------------------------------\n");
+      buff3.append(" BillId     Date & Time       Amount \n\n"); 
 
       lk_dispclr();
       lcd::DisplayText(3, 5, "PRINTING BILL", 1);
@@ -1760,13 +1767,13 @@ void POS_Total_Report() {
         sscanf(allBills[i].net_amt.c_str(), "%f", &net_amt_for_bill);
 
         dailyTotal += net_amt_for_bill;
-        buff3.append(" " + allBills[i].id + "  " + allBills[i].date_time +
-                     "  :  " + allBills[i].net_amt + '\n');
+        buff3.append("  " + allBills[i].id + "  " + allBills[i].date_time +
+                     "  :    " + allBills[i].net_amt + '\n');
       }
 
-      buffx.append("     -------------------------------\n");
+      buff3.append(" ------------------------------------\n");
 
-      buffx.append(std::string("    TOTAL          :Rs "));
+      buffx.append(std::string("  TOTAL      :Rs "));
       buffx.append(tostr(dailyTotal));
       int ret;
 
@@ -1782,7 +1789,7 @@ void POS_Total_Report() {
       ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
       returncheck(ret);
 
-      ret = printer::WriteText(buffx.c_str(), buffx.size(), 1);
+      ret = printer::WriteText(buffx.c_str(), buffx.size(), 2);
       returncheck(ret);
 
       ret = printer::WriteText("\n\n\n", 3, 1);
@@ -1844,7 +1851,83 @@ void POS_Stock_Report() {
                     return;
                 }
 
+                    std::string buff, buff1, buff2, buff3, buffx;
+                    prn_open();
+
+                    if (prn_paperstatus() != 0) {
+                        lk_dispclr();
+                        lcd::DisplayText(3, 5, "No Paper !", 1);
+                        lk_getkey();
+                        return;
+                    }
+
+                klok::pos::Configuration c;
+                klok::pos::Configuration::ParseFromFile("POS.cfg", c);
+
+                appendToIfFound(buff, c.getData(), "Company_Title_L1");
+                appendToIfFound(buff, c.getData(), "Company_Title_L2");
+                appendToIfFound(buff1, c.getData(), "Company_Addr_L1");
+                appendToIfFound(buff1, c.getData(), "Company_Addr_L2");
+                appendToIfFound(buff1, c.getData(), "Company_Addr_L3");
+                appendToIfFound(buff1, c.getData(), "Company_Contact_L1");
+                appendToIfFound(buff1, c.getData(), "Company_Contact_L2");
+                appendToIfFound(buff1, c.getData(), "Company_Email_L1");
+                // appendToIfFound(buff2,c.getData(),"Bill_name_1");
+                // appendToIfFound(buff2,c.getData(),"Bill_name_2");
+                // appendToIfFound(buff2,c.getData(),"Bill_name_3");
+                // appendToIfFound(buff2, c.getData(), "Report_name_1");
+                // appendToIfFound(buff2,c.getData(),"Report_name_2");
+                buff2.append("\n");
+                appendToIfFound(buff2,c.getData(),"Report_name_3");
+                // appendToIfFound(buff2,c.getData(),"Report_name_4");
+                // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
+                // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
+                // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
+                // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
+                buff3.append("\n");
+                buff3.append("   ---------------------------------\n"); 
+                buff3.append("    Code  Name      Stock      Sold \n\n"); 
+
+                lk_dispclr();
+                lcd::DisplayText(3, 5, "PRINTING BILL", 1);
                 // Print report here
+                for (int i = 0; i < soldSummary.size(); ++i)
+                {
+                     buff3.append("    " + soldSummary[i].code + "  " + soldSummary[i].name +
+                     "    " + soldSummary[i].stock +  "        " + tostr(soldSummary[i].sold) + '\n');
+                }
+
+                buffx.append("     -------------------------------\n");
+
+                // buffx.append(std::string("    TOTAL          :Rs "));
+                // buffx.append(tostr(totalSold));
+                int ret;
+
+                ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+                returncheck(ret);
+
+                ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+                returncheck(ret);
+
+                ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
+                returncheck(ret);
+
+                ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+                returncheck(ret);
+
+                ret = printer::WriteText(buffx.c_str(), buffx.size(), 1);
+                returncheck(ret);
+
+                ret = printer::WriteText("\n\n\n", 3, 1);
+                returncheck(ret);
+                ret = prn_paper_feed(1);
+                prn_close();
+
+                if (ret == -3) {
+                  printf("out of the paper");
+                } else {
+                    return;
+                }
 
             }
 
@@ -1868,12 +1951,95 @@ void POS_Deleted_Bill_Report(){
                                                     1000) == 0) {
         if(allBills.size()){
 
-            for(Iter_t it = allBills.begin();it != allBills.end();++it){
+                // print bill id , date_time , net_amt , add / less , user id
 
-                const klok::pc::PosBillHeader & hdr = *it;
+            std::string buff, buff1, buff2, buff3, buffx;
+            prn_open();
 
-                // print bill id , date time , total , add / less , user id
+            if (prn_paperstatus() != 0) {
+                lk_dispclr();
+                lcd::DisplayText(3, 5, "No Paper !", 1);
+                lk_getkey();
+                return;
+            }
 
+            lk_dispclr();
+            lcd::DisplayText(3, 5, "PRINTING BILL", 1);
+
+            klok::pos::Configuration c;
+            klok::pos::Configuration::ParseFromFile("POS.cfg", c);
+
+            appendToIfFound(buff, c.getData(), "Company_Title_L1");
+            appendToIfFound(buff, c.getData(), "Company_Title_L2");
+            appendToIfFound(buff1, c.getData(), "Company_Addr_L1");
+            appendToIfFound(buff1, c.getData(), "Company_Addr_L2");
+            appendToIfFound(buff1, c.getData(), "Company_Addr_L3");
+            appendToIfFound(buff1, c.getData(), "Company_Contact_L1");
+            appendToIfFound(buff1, c.getData(), "Company_Contact_L2");
+            appendToIfFound(buff1, c.getData(), "Company_Email_L1");
+            // appendToIfFound(buff2,c.getData(),"Bill_name_1");
+            // appendToIfFound(buff2,c.getData(),"Bill_name_2");
+            // appendToIfFound(buff2,c.getData(),"Bill_name_3");
+            // appendToIfFound(buff2, c.getData(), "Report_name_1");
+            // appendToIfFound(buff2,c.getData(),"Report_name_2");
+            // appendToIfFound(buff2,c.getData(),"Report_name_3");
+            buff2.append("\n");
+            appendToIfFound(buff2,c.getData(),"Report_name_4");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
+            // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
+            buff3.append("\n");
+            buff3.append(" --------------------------------------\n"); 
+            buff3.append(" BillNo  Date & Time   Net Amt   Usr Id\n\n"); 
+
+
+            for (int i = 0; i < allBills.size(); ++i)
+            {   if (allBills[i].is_deleted == "1"){
+
+                    buff3.append(" " + gDeviceId + allBills[i].id + " " + allBills[i].date_time + 
+                        " "+ allBills[i].net_amt +  " " + allBills[i].user_id + '\n');
+
+                    printf(" Bill id :%s", allBills[i].id.c_str());
+                    printf(" billDate :%s", allBills[i].date_time.c_str());
+                    printf(" billAmt :%s", allBills[i].gross_amt.c_str());
+                    printf(" billAmt :%s", allBills[i].add_less.c_str());
+                    printf(" billAmt :%s", allBills[i].net_amt.c_str());
+                    printf(" billAmt :%s\n", allBills[i].user_id.c_str());
+
+                }
+            }
+
+            buffx.append(" --------------------------------------\n");
+
+            // buffx.append(std::string("    TOTAL          :Rs "));
+            // buffx.append(tostr(totalSold));
+            int ret;
+
+            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+            returncheck(ret);
+
+            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+            returncheck(ret);
+
+            ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
+            returncheck(ret);
+
+            ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+            returncheck(ret);
+
+            ret = printer::WriteText(buffx.c_str(), buffx.size(), 1);
+            returncheck(ret);
+
+            ret = printer::WriteText("\n\n\n", 3, 1);
+            returncheck(ret);
+            ret = prn_paper_feed(1);
+            prn_close();
+
+            if (ret == -3) {
+              printf("out of the paper");
+            } else {
+                return;
             }
 
         }
@@ -1902,13 +2068,13 @@ void Reports() {
 
     menu.start = 0;
     menu.maxEntries = 7;
-    strcpy(menu.menu[0], "Daily Collection Report");
+    strcpy(menu.menu[0], "Daily Collection Rpt");
     strcpy(menu.menu[1], "Consolidated Report");
     strcpy(menu.menu[2], "Customer Wise Report");
     strcpy(menu.menu[3], "POS Day Report");
     strcpy(menu.menu[4], "POS Total Report");
     strcpy(menu.menu[5], "POS Stock Report");
-    strcpy(menu.menu[6], "Cleared Bill Report");
+    strcpy(menu.menu[6], "Cancelled Bill Rpt");
     while (1) {
       lk_dispclr();
 
