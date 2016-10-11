@@ -619,6 +619,7 @@ namespace klok
                     outProduct.short_name = query.getColumn(2).getString();
                     outProduct.code = query.getColumn(3).getString();
                     outProduct.sales_rate = query.getColumn(4).getString();
+                    outProduct.stock_quantity = query.getColumn(5).getString();
                     outProducts.push_back(outProduct);
                 }
 
@@ -1117,6 +1118,33 @@ namespace klok
         }
 
 
+        float PosBillItem::GetTotalSold(SQLite::Database & db,const char * prod){
+            float totals = 0;
+
+            SQLite::Statement stmt(db,Queries::GET_TOTAL_SOLD_PER_ITEM);
+            try
+            {
+                if(!stmt.executeStep()){
+                    std::printf("Getting total sold failed");
+                    return -1;
+                }
+                else
+                {
+                    if(!stmt.getColumn(0).isNull()){
+                        const std::string val = stmt.getColumn(0).getString();
+                        totals = static_cast<float>(atof(val.c_str()));
+                    }
+                }
+
+            }
+            catch(std::exception & exc)
+            {
+                std::printf("Error PosBillItem::GetTotalSold %s\n" , exc.what());
+                return -1;
+            }
+
+            return totals;
+        }
         // User Queries
 
         const char * User::Queries::GET_NEXT_TRANS_ID_FOR_USER = "select MAX(Trans_No)+1 as Next_ID from pay_coll_trans where User_ID=?";
@@ -1197,12 +1225,13 @@ namespace klok
         const char * Product::Queries::DROP_PRODUCT_TABLE_QUERY = "DROP TABLE pos_product IF EXISTS;";
 
         const char * Product::Queries::CREATE_PRODUCT_TABLE_QUERY =
-            "CREATE TABLE pos_product ("
+            "CREATABLE TE pos_product ("
             "Id           INTEGER PRIMARY KEY AUTOINCREMENT,"
             "Name         TEXT,"
             "ShortName    TEXT,"
             "Code         TEXT    UNIQUE,"
-            "SalesRate    REAL    );";
+            "SalesRate    REAL,    "
+            "StockQuantity REAL DEFAULT 0);";
 
         // POS Bill Header Queries
 
@@ -1276,6 +1305,10 @@ namespace klok
             " Quantity,"
             " Net_Amt) VALUES ("
             "?, ?, ?, ?);";
+
+        const char * PosBillItem::Queries::GET_TOTAL_SOLD_PER_ITEM = "select SUM(Quantity) from pos_bill_item where Product_ID=? "
+                                                                     "and ((select Is_Deleted from pos_bill_header where Id = "
+                                                                     "pos_bill_item.Bill_ID) != '1')";
 
         // POS Stock Queries
 

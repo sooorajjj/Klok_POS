@@ -110,7 +110,7 @@ namespace klok
         {
         public:
 
-            std::string id, name, short_name, code, sales_rate;
+            std::string id, name, short_name, code, sales_rate,stock_quantity;
 
             static int32_t GetAllFromDatabase(SQLite::Database& db, std::vector<Product>& outProducts, uint32_t maxToRead);
             static int32_t FromDatabase(SQLite::Database& db, const char* id, Product& outProduct);
@@ -187,7 +187,7 @@ namespace klok
             static int32_t InsertIntoTable(SQLite::Database& db, const PosBillItem& toInsert);
             static int32_t DeleteAllFromTable(SQLite::Database& db);
 
-
+            static float GetTotalSold(SQLite::Database & db,const char * prod);
             struct Queries
             {
                 static const char* TABLE_NAME;
@@ -198,6 +198,7 @@ namespace klok
                 static const char* INSERT_INTO_TABLE;
                 static const char* DELETE_ALL_FROM_TABLE;
                 static const char* RESET_PRIMARY_KEY;
+                static const char* GET_TOTAL_SOLD_PER_ITEM;
             };
         };
 
