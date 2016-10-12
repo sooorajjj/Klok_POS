@@ -232,7 +232,7 @@ void insertAndPrint(std::string principleAmtString,
       }
 
       klok::pos::Configuration c;
-      klok::pos::Configuration::ParseFromFile("POS.cfg", c);
+      klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
 
       appendToIfFound(buff, c.getData(), "Company_Title_L1");
       appendToIfFound(buff, c.getData(), "Company_Title_L2");
@@ -563,7 +563,7 @@ float add_less_pos() {
   lcd::DisplayText(1, 8, "Add/Less", 0);
   lcd::DisplayText(3, 1, "Press F2 to Add Amt", 0);
   lcd::DisplayText(4, 1, "Press F3 to Less Amt", 0);
-  lcd::DisplayText(5, 4, "ENTER to skip", 0);
+  lcd::DisplayText(5, 4, "ENTER to print", 0);
   int x = lk_getkey();
   lk_dispclr();
 
@@ -741,7 +741,7 @@ void display_bill_summary() {
         }
 
         klok::pos::Configuration c;
-        klok::pos::Configuration::ParseFromFile("POS.cfg", c);
+        klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
 
         appendToIfFound(buff, c.getData(), "Company_Title_L1");
         appendToIfFound(buff, c.getData(), "Company_Title_L2");
@@ -787,7 +787,6 @@ void display_bill_summary() {
         }
 
         buff3.append("   ---------------------------------\n");
-        buff3.append("\n");
         buff3.append("   Net Amount                  " + tostr(gBillAmt));
         buff3.append("\n");
         buff3.append("   Discount(Round Off)          " + tostr(add_less_amt));
@@ -1067,6 +1066,11 @@ void Pos_Billing_Type_Choice(){
 }
 
 void Billing() {
+
+Pos_Billing_Type_Choice();
+
+return;
+
   printf("Billing\n");
   gBillData.clear();
   gBillAmt = 0;
@@ -1756,9 +1760,7 @@ void POS_Daily_Report() {
       std::vector<klok::pc::PosBillHeader> billsForDate;
       if (klok::pc::PosBillHeader::GetTransactionsForDate(
               getDatabase(), billsForDate, dateToQuery.c_str(), 100) == 0) {
-        int x = lk_getkey();
 
-        if (x == klok::pc::KEYS::KEY_ENTER) {
           std::string buff, buff1, buff2, buff3, buff4, buff5, buffx;
           prn_open();
           if (prn_paperstatus() != 0) {
@@ -1769,7 +1771,7 @@ void POS_Daily_Report() {
           }
 
           klok::pos::Configuration c;
-          klok::pos::Configuration::ParseFromFile("POS.cfg", c);
+          klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
 
           appendToIfFound(buff, c.getData(), "Company_Title_L1");
           appendToIfFound(buff, c.getData(), "Company_Title_L2");
@@ -1808,7 +1810,7 @@ void POS_Daily_Report() {
 
             dailyTotal += net_amt_for_bill;
 
-            buff3.append(" " + billsForDate[i].id + "   " +
+            buff3.append(" " + gDeviceId + billsForDate[i].id + "   " +
                          billsForDate[i].date_time + "  :  " +
                          billsForDate[i].net_amt + '\n');
           }
@@ -1845,9 +1847,6 @@ void POS_Daily_Report() {
             return;
           }
 
-        } else if (x == klok::pc::KEYS::KEY_CANCEL) {
-          return;
-        }
       }
     }
   }
@@ -1873,7 +1872,7 @@ void POS_Total_Report() {
       }
 
       klok::pos::Configuration c;
-      klok::pos::Configuration::ParseFromFile("POS.cfg", c);
+      klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
 
       appendToIfFound(buff, c.getData(), "Company_Title_L1");
       appendToIfFound(buff, c.getData(), "Company_Title_L2");
@@ -1911,7 +1910,7 @@ void POS_Total_Report() {
         sscanf(allBills[i].net_amt.c_str(), "%f", &net_amt_for_bill);
 
         dailyTotal += net_amt_for_bill;
-        buff3.append("  " + allBills[i].id + "   " + allBills[i].date_time +
+        buff3.append("  " + gDeviceId + allBills[i].id + "   " + allBills[i].date_time +
                      "  :    " + allBills[i].net_amt + '\n');
       }
 
@@ -2006,7 +2005,7 @@ void POS_Stock_Report() {
                     }
 
                 klok::pos::Configuration c;
-                klok::pos::Configuration::ParseFromFile("POS.cfg", c);
+                klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
 
                 appendToIfFound(buff, c.getData(), "Company_Title_L1");
                 appendToIfFound(buff, c.getData(), "Company_Title_L2");
@@ -2112,7 +2111,7 @@ void POS_Deleted_Bill_Report(){
             lcd::DisplayText(3, 5, "PRINTING BILL", 1);
 
             klok::pos::Configuration c;
-            klok::pos::Configuration::ParseFromFile("POS.cfg", c);
+            klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
 
             appendToIfFound(buff, c.getData(), "Company_Title_L1");
             appendToIfFound(buff, c.getData(), "Company_Title_L2");
@@ -2213,14 +2212,14 @@ void Reports() {
     lk_dispclr();
 
     menu.start = 0;
-    menu.maxEntries = 7;
-    strcpy(menu.menu[0], "Daily Collection Rpt");
-    strcpy(menu.menu[1], "Consolidated Report");
-    strcpy(menu.menu[2], "Customer Wise Report");
-    strcpy(menu.menu[3], "POS Day Report");
-    strcpy(menu.menu[4], "POS Total Report");
-    strcpy(menu.menu[5], "POS Stock Report");
-    strcpy(menu.menu[6], "Cancelled Bill Rpt");
+    menu.maxEntries = 4;
+    strcpy(menu.menu[0], "POS Day Report");
+    strcpy(menu.menu[1], "POS Total Report");
+    strcpy(menu.menu[2], "POS Stock Report");
+    strcpy(menu.menu[3], "Cancelled Bill Rpt");
+    strcpy(menu.menu[4], "Daily Collection Rpt");
+    strcpy(menu.menu[5], "Consolidated Report");
+    strcpy(menu.menu[6], "Customer Wise Report");
     while (1) {
       lk_dispclr();
 
@@ -2233,27 +2232,27 @@ void Reports() {
         case ENTER:
           switch (selItem + 1) {
             case 1:
-              DailyCollectionReport();
+              POS_Daily_Report();
               break;
 
             case 2:
-              ConsolidatedReport();
+              POS_Total_Report();
               break;
 
             case 3:
-              CustomerWiseReport();
-              break;
-            case 4:
-              POS_Daily_Report();
-              break;
-            case 5:
-              POS_Total_Report();
-              break;
-          case 6:
               POS_Stock_Report();
               break;
-          case 7:
+            case 4:
               POS_Deleted_Bill_Report();
+              break;
+            case 5:
+              ConsolidatedReport();
+              break;
+          case 6:
+              CustomerWiseReport();
+              break;
+          case 7:
+              DailyCollectionReport();
               break;
 
           }
