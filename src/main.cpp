@@ -753,7 +753,7 @@ void display_bill_summary() {
         appendToIfFound(buff1, c.getData(), "Company_Email_L1");
         buff1.append("\n");
         appendToIfFound(buff2, c.getData(), "Bill_name_1");
-        appendToIfFound(buff3, c.getData(), "Bill_Line2_2");
+        appendToIfFound(buff3, c.getData(), "Bill_Line2_1");
 
         // appendToIfFound(buff2,c.getData(),"Bill_name_2");
         // appendToIfFound(buff2,c.getData(),"Bill_name_3");
@@ -776,8 +776,8 @@ void display_bill_summary() {
         buff3.append("   SL:NO  Itm name  Qty  Rate  Total\n\n");
 
         for (int i = 0; i != productDisplayList.size(); i++) {
-          buff3.append("    ");
-          buff3.append(productDisplayList[i].code + "      " +
+          buff3.append("     ");
+          buff3.append(tostr(i+1) + "      " +
                        productDisplayList[i].short_name + "     " +
                        tostr(productDisplayList[i].details.Quantity) + "  * " +
                        tostr(productDisplayList[i].details.SalesRate) + " :  " +
@@ -788,15 +788,15 @@ void display_bill_summary() {
 
         buff3.append("   ---------------------------------\n");
         buff3.append("\n");
-        buff3.append("   Net Amount               " + tostr(gBillAmt));
+        buff3.append("   Net Amount                  " + tostr(gBillAmt));
         buff3.append("\n");
-        buff3.append("   Discount(Round Off)      " + tostr(add_less_amt));
+        buff3.append("   Discount(Round Off)          " + tostr(add_less_amt));
         buff3.append("\n");
         buff3.append("   ---------------------------------\n");
-        buff4.append("  TOTAL      ");
+        buff4.append("  TOTAL       ");
         buff4.append(tostr(gBillAmt + add_less_amt));
         buff4.append("\n");
-        buff5.append("     User                 ");
+        buff5.append("     User  : ");
         buff5.append(gUserName);
         buff5.append("\n");
         buff5.append("   ---------------------------------\n");
@@ -804,9 +804,6 @@ void display_bill_summary() {
         appendToIfFound(buff5, c.getData(), "Print_Footer_L2");
         appendToIfFound(buff5, c.getData(), "Print_Footer_L3");
         appendToIfFound(buff5, c.getData(), "Print_Footer_L4");
-        buff5.append("           ");
-        buff5.append(getCurrentTime());
-        buff5.append("\n");
 
         lk_dispclr();
         lcd::DisplayText(3, 5, "PRINTING BILL", 1);
@@ -1798,7 +1795,9 @@ void POS_Daily_Report() {
           buff3.append("     Report Date         :");
           buff3.append(dateToQuery);
           buff3.append("\n");
-          buff3.append("     -------------------------------\n");
+          buff3.append(" --------------------------------------\n"); 
+          buff3.append(" BillNo    Date & Time     Net Amt   \n"); 
+          buff3.append(" --------------------------------------\n"); 
 
           lk_dispclr();
           lcd::DisplayText(3, 5, "PRINTING BILL", 1);
@@ -1809,7 +1808,7 @@ void POS_Daily_Report() {
 
             dailyTotal += net_amt_for_bill;
 
-            buff3.append(" " + billsForDate[i].id + "  " +
+            buff3.append(" " + billsForDate[i].id + "   " +
                          billsForDate[i].date_time + "  :  " +
                          billsForDate[i].net_amt + '\n');
           }
@@ -1898,8 +1897,8 @@ void POS_Total_Report() {
       // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
       buff3.append("\n");
       buff3.append(" ------------------------------------\n");
-      buff3.append(" BillId     Date & Time       Amount \n\n"); 
-
+      buff3.append(" BillNo     Date & Time       Amount \n"); 
+      buff3.append(" --------------------------------------\n"); 
       lk_dispclr();
       lcd::DisplayText(3, 5, "PRINTING BILL", 1);
       for (int i = 0; i != allBills.size(); i++) {
@@ -1912,7 +1911,7 @@ void POS_Total_Report() {
         sscanf(allBills[i].net_amt.c_str(), "%f", &net_amt_for_bill);
 
         dailyTotal += net_amt_for_bill;
-        buff3.append("  " + allBills[i].id + "  " + allBills[i].date_time +
+        buff3.append("  " + allBills[i].id + "   " + allBills[i].date_time +
                      "  :    " + allBills[i].net_amt + '\n');
       }
 
@@ -2031,14 +2030,15 @@ void POS_Stock_Report() {
                 // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
                 buff3.append("\n");
                 buff3.append("   ---------------------------------\n"); 
-                buff3.append("    Code  Name      Stock      Sold \n\n"); 
+                buff3.append("    Code  Name      Stock      Sold \n"); 
+                buff3.append(" --------------------------------------\n"); 
 
                 lk_dispclr();
                 lcd::DisplayText(3, 5, "PRINTING BILL", 1);
                 // Print report here
                 for (int i = 0; i < soldSummary.size(); ++i)
                 {
-                     buff3.append("    " + soldSummary[i].code + "  " + soldSummary[i].name +
+                     buff3.append("    " + soldSummary[i].code + "  " + soldSummary[i].name.substr(0, 9) +
                      "    " + soldSummary[i].stock +  "        " + tostr(soldSummary[i].sold) + '\n');
                 }
 
@@ -2136,14 +2136,15 @@ void POS_Deleted_Bill_Report(){
             // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
             buff3.append("\n");
             buff3.append(" --------------------------------------\n"); 
-            buff3.append(" BillNo  Date & Time   Net Amt   Usr Id\n\n"); 
+            buff3.append(" BillNo    Date & Time     Net Amt   \n"); 
+            buff3.append(" --------------------------------------\n"); 
 
 
             for (int i = 0; i < allBills.size(); ++i)
             {   if (allBills[i].is_deleted == "1"){
 
-                    buff3.append(" " + gDeviceId + allBills[i].id + " " + allBills[i].date_time + 
-                        " "+ allBills[i].net_amt +  " " + allBills[i].user_id + '\n');
+                    buff3.append("   " + gDeviceId + allBills[i].id + "   " + allBills[i].date_time + 
+                        "     "+ allBills[i].net_amt + '\n');
 
                     printf(" Bill id :%s", allBills[i].id.c_str());
                     printf(" billDate :%s", allBills[i].date_time.c_str());
@@ -2536,7 +2537,7 @@ void ClearBill() {
 void DeleteBill() {
   std::vector<klok::pc::PosBillHeader> allBills;
   if (klok::pc::PosBillHeader::GetAllNonDeleted(getDatabase(), allBills,
-                                                1000) == 0) {
+                                                1000) == 0 && allBills.size()) {
     klok::pc::MenuResult res;
     res.wasCancelled = false;
     res.selectedIndex = -1;
@@ -2549,6 +2550,9 @@ void DeleteBill() {
       lcd::DisplayText(4, 0, "Press F2 to Delete / Press Enter to return", 0);
 
       int x = lk_getkey();
+
+
+
 
       if (x == klok::pc::KEYS::KEY_F2) {
         if (klok::pc::PosBillHeader::MarkBillAsDeleted(
