@@ -634,6 +634,36 @@ namespace klok
             return 0;
         }
 
+        int32_t Product::GetMatchingSearch(SQLite::Database& db,const char * searchTerm, std::vector<Product>& outProducts, uint32_t maxToRead)
+        {
+            try
+            {
+                SQLite::Statement query(db, Product::Queries::SEARCH_PRODUCTS_BY_NAME_FROM_TABLE);
+                query.bind("@search",searchTerm);
+                while(query.executeStep() && (maxToRead--))
+                {
+                    Product outProduct;
+                    outProduct.id = query.getColumn(0).getString();
+                    outProduct.name = query.getColumn(1).getString();
+                    outProduct.short_name = query.getColumn(2).getString();
+                    outProduct.code = query.getColumn(3).getString();
+                    outProduct.sales_rate = query.getColumn(4).getString();
+                    outProduct.stock_quantity = query.getColumn(5).getString();
+                    outProducts.push_back(outProduct);
+                }
+
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Product::GetMatchingSearch -> Fatal Error query :%s\n %s\n", Product::Queries::SEARCH_PRODUCTS_BY_NAME_FROM_TABLE, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
+
+
         int32_t Product::CreateTable(SQLite::Database& db,bool dropIfExist)
         {
             try
@@ -679,6 +709,31 @@ namespace klok
             catch(std::exception& e)
             {
                 std::printf("Product::FromDatabase -> Fatal Error %s\n", e.what());
+            }
+           return -1;
+        }
+
+        int32_t Product::FromDatabaseWithCode(SQLite::Database& db, const char* code, Product& outProduct)
+        {
+            try
+            {
+                SQLite::Statement query(db, Product::Queries::SELECT_PRODUCT_WITH_CODE_FROM_TABLE);
+                query.bind(1, code);
+
+                if(query.executeStep())
+                {
+                    outProduct.id = query.getColumn(0).getString();
+                    outProduct.name = query.getColumn(1).getString();
+                    outProduct.short_name = query.getColumn(2).getString();
+                    outProduct.code = query.getColumn(3).getString();
+                    outProduct.sales_rate = query.getColumn(4).getString();
+                    outProduct.stock_quantity = query.getColumn(5).getString();
+                    return 0;
+                }
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Product::FromDatabaseWithCode -> Fatal Error %s\n", e.what());
             }
            return -1;
         }
@@ -1224,7 +1279,9 @@ namespace klok
         const char * Product::Queries::TABLE_NAME = "pos_product";
         const char * Product::Queries::GET_ALL_QUERY = "SELECT * FROM pos_product";
         const char * Product::Queries::SELECT_PRODUCT_WITH_ID_FROM_TABLE = "SELECT * FROM pos_product WHERE Id=?";
+        const char * Product::Queries::SELECT_PRODUCT_WITH_CODE_FROM_TABLE = "SELECT * FROM pos_product WHERE Code=?";
         const char * Product::Queries::DROP_PRODUCT_TABLE_QUERY = "DROP TABLE pos_product IF EXISTS;";
+        const char * Product::Queries::SEARCH_PRODUCTS_BY_NAME_FROM_TABLE = "SELECT * FROM pos_product where Name LIKE '%' || @search || '%' OR ShortName LIKE '%' || @search || '%'";
 
         const char * Product::Queries::CREATE_PRODUCT_TABLE_QUERY =
             "CREATABLE TE pos_product ("

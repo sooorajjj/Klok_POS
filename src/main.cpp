@@ -867,8 +867,16 @@ void ask_product_quantity(const klok::pc::Product& inProduct) {
   char qty[10] = {0};
   float scanned = 0;
 
-  lcd::DisplayText(2, 0, "Enter Quantity", 0);
-  res = lk_getnumeric(4, 0, (unsigned char*)qty, 10, strlen(qty));
+  const std::string stockDisp = "Init Stock : " + inProduct.stock_quantity;
+
+  const float soldStock = klok::pc::PosBillItem::GetTotalSold(getDatabase(),inProduct.id.c_str());
+
+  const std::string soldStockDisp = "Sold : " + tostr(soldStock);
+
+  lcd::DisplayText(1, 0, "Enter Quantity", 0);
+  lcd::DisplayText(2, 0,stockDisp.c_str() , 0);
+  lcd::DisplayText(3, 0,soldStockDisp.c_str() , 0);
+  res = lk_getnumeric(5, 0, (unsigned char*)qty, 10, strlen(qty));
   if (sscanf(qty, "%f", &scanned) == 1 && res > 0) {
     printf("Quantity Entered%f \n", scanned);
     addItemToBill(inProduct, scanned);
@@ -882,10 +890,99 @@ void ask_product_quantity(const klok::pc::Product& inProduct) {
   }
 }
 
-void POS() {
+void BillingByCode(){
+
+    while(true){
+        lk_dispclr();
+        char data[256] = {0};
+        lcd::DisplayText(2, 0, "Enter Code", 0);
+        int res = lk_getnumeric(4, 0, (unsigned char*)data, 10, strlen(data));
+        if (res > 0) {
+          printf("Code : %s \n", data);
+
+          klok::pc::Product outP;
+          if(klok::pc::Product::FromDatabaseWithCode(getDatabase(),data,outP) != 0){
+              lk_dispclr();
+              lcd::DisplayText(1, 0, "Wrong Code", 0);
+              lcd::DisplayText(3, 0, "Try Again - Enter", 0);
+              lcd::DisplayText(4, 0, "Cancel - Any other key", 0);
+               if(lk_getkey() == klok::pc::KEYS::KEY_ENTER){
+                   continue;
+               }
+               else {
+                   return;
+               }
+
+          }
+
+          ask_product_quantity(outP);
+          break;
+
+        }
+    }
+}
+
+void Bill_By_Search_Name(){
+    while(true){
+        lk_dispclr();
+        char data[256] = {0};
+        lcd::DisplayText(2, 0, "Enter Search", 0);
+        int res = lk_getalpha(3,0,(unsigned char *)data,10,strlen(data),0);
+        if (res > 0) {
+          printf("Code : %s \n", data);
+
+          std::vector<klok::pc::Product> allProducts;
+
+          if(klok::pc::Product::GetMatchingSearch(getDatabase(),data,allProducts,500) == 0 && allProducts.size()){
+
+              klok::pc::MenuResult res;
+              res.wasCancelled = false;
+              res.selectedIndex = -1;
+
+              char totalAmountLabel[30] = {0};
+              snprintf(totalAmountLabel, sizeof(totalAmountLabel) - 1,
+                       "Total Amt : %.02f", gBillAmt);
+
+              klok::pc::display_sub_range_with_title(allProducts, totalAmountLabel, 5,
+                                                     res, &getPosProductDisplayName);
+
+              if (!res.wasCancelled) {
+                gProductName = allProducts[res.selectedIndex].name;
+                ask_product_quantity(allProducts[res.selectedIndex]);
+              } else if (klok::pc::KEYS::KEY_F6 == res.lastSpecialKey) {
+                printf("User wants to proceed to billing\n");
+                display_bill_summary();
+                printf("User finished with billing\n");
+
+              } else {
+                break;
+              }
+
+          }
+          else {
+              lk_dispclr();
+              lcd::DisplayText(1, 0, "No match found", 0);
+
+              lcd::DisplayText(3, 0, "Continue - Enter", 0);
+              lcd::DisplayText(4, 0, "Cancel - Any Key", 0);
+
+              if(lk_getkey() == klok::pc::KEYS::KEY_ENTER){
+                  continue;
+              }
+              else
+              {
+                  return;
+              }
+          }
+
+          break;
+        }
+    }
+}
+
+void Bill_By_Item_List() {
   printf("POS Activity\n");
   lk_dispclr();
-  gBillData.clear();
   std::vector<klok::pc::Product> allProducts;
   if (klok::pc::Product::GetAllFromDatabase(getDatabase(), allProducts, 500) ==
       0) {
@@ -925,9 +1022,57 @@ void POS() {
   }
 }
 
+void Pos_Billing_Type_Choice(){
+
+    printf("Billing Choice\n");
+
+    MENU_T menu;
+    int opt = 0;
+    int selItem = 0;
+    int acceptKbdEvents = 0;
+
+    while (1) {
+      lk_dispclr();
+
+      menu.start = 0;
+      menu.maxEntries = 3;
+      strcpy(menu.menu[0], "By Code");
+      strcpy(menu.menu[1], "List All");
+      strcpy(menu.menu[2], "By Name Search");
+
+      while (1) {
+        lk_dispclr();
+
+        opt = scroll_menu(&menu, &selItem, acceptKbdEvents);
+
+        switch (opt) {
+          case CANCEL:
+            return;
+
+          case ENTER:
+            switch (selItem + 1) {
+              case 1:
+                BillingByCode();
+                break;
+              case 2:
+                Bill_By_Item_List();
+                break;
+            case 3:
+              Bill_By_Search_Name();
+              break;
+
+            }
+            break;
+        }
+      }
+    }
+
+}
+
 void Billing() {
   printf("Billing\n");
-
+  gBillData.clear();
+  gBillAmt = 0;
   MENU_T menu;
   int opt = 0;
   int selItem = 0;
@@ -958,7 +1103,7 @@ void Billing() {
               break;
             case 2:
               gMode = Operation::SpotBilling;
-              POS();
+              Pos_Billing_Type_Choice();
               break;
           }
           break;

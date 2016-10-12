@@ -113,9 +113,10 @@ namespace klok
             std::string id, name, short_name, code, sales_rate,stock_quantity;
 
             static int32_t GetAllFromDatabase(SQLite::Database& db, std::vector<Product>& outProducts, uint32_t maxToRead);
+            static int32_t GetMatchingSearch(SQLite::Database& db,const char * searchTerm, std::vector<Product>& outProducts, uint32_t maxToRead);
             static int32_t FromDatabase(SQLite::Database& db, const char* id, Product& outProduct);
             static int32_t CreateTable(SQLite::Database& db, bool dropIfExist);
-
+            static int32_t FromDatabaseWithCode(SQLite::Database& db, const char* code, Product& outProduct);
             struct Queries
             {
                 static const char* TABLE_NAME;
@@ -123,6 +124,8 @@ namespace klok
                 static const char* CREATE_PRODUCT_TABLE_QUERY;
                 static const char* DROP_PRODUCT_TABLE_QUERY;
                 static const char* SELECT_PRODUCT_WITH_ID_FROM_TABLE;
+                static const char* SELECT_PRODUCT_WITH_CODE_FROM_TABLE;
+                static const char* SEARCH_PRODUCTS_BY_NAME_FROM_TABLE;
 
             };
         };
