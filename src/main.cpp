@@ -46,7 +46,12 @@ typedef std::map<std::string, klok::pc::POSBillEntry>::iterator BillIter_t;
 Operation::Mode gMode = Operation::NotSelected;
 
 }
-
+template <typename T>
+std::string tostr(const T& t) {
+  std::ostringstream os;
+  os << t;
+  return os.str();
+}
 static void appendToIfFound(std::string& buffer,
                             klok::pos::Configuration::Data_t& data,
                             const char* key) {
@@ -529,9 +534,8 @@ struct BillSummaryDisplayEntry {
 static const char* BillSummaryDisplayEntryToString(
     const BillSummaryDisplayEntry& entry) {
   char displayBuffer[30] = {0};
-  snprintf(displayBuffer, sizeof(displayBuffer) - 1, "%s:%s - %.02f",
-           entry.code.c_str(), entry.short_name.c_str(),
-           entry.details.Quantity);
+  snprintf(displayBuffer, sizeof(displayBuffer) - 1, "%s: %.02f", entry.short_name.substr(0,12).c_str(),
+           entry.details.Quantity * entry.details.SalesRate);
   std::string display = displayBuffer;
   return display.c_str();
 }
@@ -557,7 +561,7 @@ void edit_product_quantity(const BillSummaryDisplayEntry& entry) {
     }
   }
 }
-float add_less_pos() {
+float add_less_pos(float billAmt) {
   lk_dispclr();
   lcd::DisplayText(0, 1, "Discount(Round Off)", 0);
   lcd::DisplayText(3, 1, "Press F3 to Less Amt", 0);
@@ -570,6 +574,7 @@ if (x == klok::pc::KEYS::KEY_F3) {
     char addLess[10] = {0};
 
     lcd::DisplayText(1, 0, "Type Amount to LESS", 0);
+    lcd::DisplayText(2, 0, ("Total : " + tostr(billAmt)).c_str(), 0);
     res = lk_getnumeric(4, 0, (unsigned char*)addLess, 10, strlen(addLess));
 
     float scanned = 0;
@@ -589,12 +594,7 @@ if (x == klok::pc::KEYS::KEY_F3) {
   return 0;
 }
 
-template <typename T>
-std::string tostr(const T& t) {
-  std::ostringstream os;
-  os << t;
-  return os.str();
-}
+
 
 void display_bill_summary() {
   lk_dispclr();
@@ -619,7 +619,7 @@ void display_bill_summary() {
         BillSummaryDisplayEntry newEntry;
         newEntry.id = selected.id;
         newEntry.code = selected.code;
-        newEntry.short_name = selected.short_name;
+        newEntry.short_name = selected.name;
         newEntry.details = iter->second;
         productDisplayList.push_back(newEntry);
       }
@@ -657,7 +657,7 @@ void display_bill_summary() {
       }
 
     } else if (klok::pc::KEYS::KEY_F6 == res.lastSpecialKey) {
-      const float add_less_amt = add_less_pos();
+      const float add_less_amt = add_less_pos(gBillAmt);
 
 
 
@@ -678,7 +678,13 @@ void display_bill_summary() {
       lcd::DisplayText(5, 0, "Press Enter to print", 0);
 
       
-      int x = lk_getkey();
+      int x = 0;
+
+      while( true){
+        x = lk_getkey();
+        if(x == klok::pc::KEYS::KEY_ENTER || x == klok::pc::KEYS::KEY_CANCEL)
+          break;
+      }
 
       if (x == klok::pc::KEYS::KEY_ENTER) {
 
@@ -769,29 +775,46 @@ void display_bill_summary() {
             buff3.append("\n");
             buff3.append("   ---------------------------------\n");
 
-            buff3.append("   SL:NO  Itm name  Qty  Rate  Total\n\n");
-
+            buff3.append("NO    Item Name       Qty   Rate     Total\n\n");
+            const std::string padding = "                              ";
             for (int i = 0; i != productDisplayList.size(); i++) {
-              buff3.append("     ");
-              buff3.append(tostr(i+1) + "      " +
-                           productDisplayList[i].short_name + "     " +
-                           tostr(productDisplayList[i].details.Quantity) + "  * " +
-                           tostr(productDisplayList[i].details.SalesRate) + " :  " +
-                           tostr(productDisplayList[i].details.Quantity *
-                                 productDisplayList[i].details.SalesRate));
-              buff3.append("\n");
+              // buff3.append("     ");
+              // buff3.append(tostr(i+1) + "      " +
+              //              productDisplayList[i].short_name + "     " +
+              //              tostr(productDisplayList[i].details.Quantity) + "  * " +
+              //              tostr(productDisplayList[i].details.SalesRate) + " :  " +
+              //              tostr(productDisplayList[i].details.Quantity *
+              //                    productDisplayList[i].details.SalesRate));
+              // buff3.append("\n");
+              const std::string serNoCol = tostr(i+1) + padding;
+              const std::string nameCol = " " + productDisplayList[i].short_name + padding;
+              const std::string quantityCol = padding + tostr(productDisplayList[i].details.Quantity);
+              const std::string salesRateCol = tostr(productDisplayList[i].details.SalesRate) + padding;
+              const std::string totalAmtCol = padding + tostr(productDisplayList[i].details.Quantity * productDisplayList[i].details.SalesRate);
+
+
+
+              buff3.append(serNoCol.substr(0,4) +
+                          " " + nameCol.substr(0,14) +
+                          quantityCol.substr(quantityCol.size() - 5) +
+                          "   " + salesRateCol.substr(0,6) +
+                          totalAmtCol.substr(totalAmtCol.size() - 8) + "\n");
             }
 
+            const std::string grosBillAmtCol = padding + tostr(gBillAmt);
+            const std::string cashDiscountCol = padding + tostr(add_less_amt);
+
             buff3.append("   ---------------------------------\n");
-            buff3.append("   Net Amount                  " + tostr(gBillAmt));
+            buff3.append("   Net Amount                 " + grosBillAmtCol.substr(grosBillAmtCol.size()-10));
             buff3.append("\n");
-            buff3.append("   Cash Discount               " + tostr(add_less_amt));
+            buff3.append("   Cash Discount              " + cashDiscountCol.substr(cashDiscountCol.size()-10));
             buff3.append("\n");
             buff3.append("   ---------------------------------\n");
-            buff4.append("  TOTAL       ");
-            buff4.append(tostr(gBillAmt - add_less_amt));
+            buff4.append("TOTAL   :");
+            const std::string billTotalCol = padding + tostr(gBillAmt - add_less_amt);
+            buff4.append(billTotalCol.substr(billTotalCol.size() - 10));
             buff4.append("\n");
-            buff5.append("     User  : ");
+            buff5.append("  User  : ");
             buff5.append(gUserName);
             buff5.append("\n");
             buff5.append("   ---------------------------------\n");
@@ -869,8 +892,14 @@ void ask_product_quantity(const klok::pc::Product& inProduct) {
 
   const std::string soldStockDisp = "Sold : " + tostr(soldStock);
 
-  lcd::DisplayText(0, 0, (inProduct.name +" : " + inProduct.sales_rate).c_str(), 0);
-  lcd::DisplayText(1, 0, "Enter Quantity", 0);
+  std::string prod_name = "";
+  if(inProduct.name.size() >= 12 )
+    prod_name = inProduct.name.substr(inProduct.name.size() - 13) ;
+  else
+    prod_name = inProduct.name;
+
+  lcd::DisplayText(0, 0, "Enter Quantity", 0);
+  lcd::DisplayText(1, 0, (prod_name +" :" + inProduct.sales_rate).c_str(), 0);
   lcd::DisplayText(2, 0,stockDisp.c_str() , 0);
   lcd::DisplayText(3, 0,soldStockDisp.c_str() , 0);
   res = lk_getnumeric(5, 0, (unsigned char*)qty, 10, strlen(qty));
@@ -985,10 +1014,10 @@ void Bill_By_Item_List() {
       0) {
     while (1) {
       // Debug
-      for (int i = 0; i != allProducts.size(); i++) {
-        printf("ProductId :%s\n", allProducts[i].id.c_str());
-        printf("ProductName :%s\n", allProducts[i].name.c_str());
-      }
+      // for (int i = 0; i != allProducts.size(); i++) {
+      //   printf("ProductId :%s\n", allProducts[i].id.c_str());
+      //   printf("ProductName :%s\n", allProducts[i].name.c_str());
+      // }
 
       klok::pc::MenuResult res;
       res.wasCancelled = false;
@@ -1023,6 +1052,47 @@ void Pos_Billing_Type_Choice(){
 
     printf("Billing Choice\n");
 
+
+    std::vector<std::string> options;
+    options.push_back("By Code");
+    options.push_back("By Name");
+    options.push_back("List All");
+    while (1) {
+
+      klok::pc::MenuResult res;
+      res.wasCancelled = false;
+      res.selectedIndex = -1;
+
+      char totalAmountLabel[30] = {0};
+      snprintf(totalAmountLabel, sizeof(totalAmountLabel) - 1,
+               "Total Amt : %.02f", gBillAmt);
+
+      klok::pc::display_sub_range_with_title(options, "F6 - Go to bill", 4,
+                                             res, &getPosTransactionDatesDisplayName);
+
+      if (!res.wasCancelled) {
+           switch (res.selectedIndex) {
+              case 0:
+                BillingByCode();
+                break;
+              case 2:
+                Bill_By_Item_List();
+                break;
+              case 1:
+                Bill_By_Search_Name();
+                break;
+
+            }
+      } else if (klok::pc::KEYS::KEY_F6 == res.lastSpecialKey) {
+        printf("User wants to proceed to billing\n");
+        display_bill_summary();
+        printf("User finished with billing\n");
+
+      } else {
+        break;
+      }
+    }
+/*
     MENU_T menu;
     int opt = 0;
     int selItem = 0;
@@ -1035,6 +1105,7 @@ void Pos_Billing_Type_Choice(){
 
       menu.start = 0;
       menu.maxEntries = 3;
+      strcpy(menu.title,"F6 - goto bill");
       strcpy(menu.menu[0], "By Code");
       strcpy(menu.menu[1], "List All");
       strcpy(menu.menu[2], "By Name Search");
@@ -1046,33 +1117,28 @@ void Pos_Billing_Type_Choice(){
         opt = scroll_menu(&menu, &selItem, acceptKbdEvents);
 
         switch (opt) {
-          case CANCEL:
-            return;
-
-          case ENTER:
-            switch (selItem + 1) {
-              case 1:
-                BillingByCode();
-                break;
-              case 2:
-                Bill_By_Item_List();
-                break;
-              case 3:
-                Bill_By_Search_Name();
-                break;
-
-            }
-            break;
+          case CANCEL:l
             
 
           case klok::pc::KEYS::KEY_F6 :
-            display_bill_summary();
-            break;
+            if(gBillData.size()){
+              display_bill_summary();
+            }
+            else
+            {
+              lk_dispclr();
+              lcd::DisplayText(5, 0, "No Items Selected", 0);
+              lk_getkey();
+              continue;
+            }
+
+              break;
+          
 
         }
       }
     }
-
+*/
 }
 
 void Billing() {
@@ -1808,26 +1874,31 @@ void POS_Daily_Report() {
           buff3.append(dateToQuery);
           buff3.append("\n");
           buff3.append(" --------------------------------------\n"); 
-          buff3.append(" BillNo    Date & Time     Net Amt   \n"); 
+          buff3.append(" BillNo    Date & Time      Net Amt   \n"); 
           buff3.append(" --------------------------------------\n"); 
 
           lk_dispclr();
           lcd::DisplayText(3, 5, "PRINTING BILL", 1);
+          const std::string padding = "                            ";
           for (int i = 0; i < billsForDate.size(); ++i) {
+            if(billsForDate[i].is_deleted == "1")
+              continue;
             float net_amt_for_bill = 0;
 
             sscanf(billsForDate[i].net_amt.c_str(), "%f", &net_amt_for_bill);
 
             dailyTotal += net_amt_for_bill;
 
-            buff3.append(" " + gDeviceId + billsForDate[i].id + "   " +
-                         billsForDate[i].date_time + "  :  " +
-                         billsForDate[i].net_amt + '\n');
+            const std::string  billIdCol = gDeviceId + billsForDate[i].id + padding;
+            const std::string  dateTimeCol = billsForDate[i].date_time + padding;
+            const std::string  netAmtCol = padding + billsForDate[i].net_amt ;
+
+            buff3.append(billIdCol.substr(0,8) + dateTimeCol.substr(0,22) + netAmtCol.substr(netAmtCol.size() - 10) + '\n');
           }
 
           buff3.append("     -------------------------------\n");
 
-          buffx.append(std::string("  TOTAL     :Rs "));
+          buffx.append(std::string("TOTAL   :Rs "));
           buffx.append(tostr(dailyTotal));
           int ret;
 
@@ -1865,7 +1936,7 @@ void POS_Daily_Report() {
 void POS_Total_Report() {
   float dailyTotal = 0;
   std::vector<klok::pc::PosBillHeader> allBills;
-  if (klok::pc::PosBillHeader::GetAllFromDatabase(getDatabase(), allBills,
+  if (klok::pc::PosBillHeader::GetAllNonDeleted(getDatabase(), allBills,
                                                   1000) == 0) {
     lk_dispclr();
     lcd::DisplayText(1,0,"Press Enter to print",1);
@@ -1905,29 +1976,12 @@ void POS_Total_Report() {
       // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
       // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
       buff3.append("\n");
-      buff3.append(" ------------------------------------\n");
-      buff3.append(" BillNo     Date & Time       Amount \n"); 
-      buff3.append(" --------------------------------------\n"); 
+      buff3.append(" -------------------------------------- \n");
+      buff3.append("BillNo   Date & Time          Amount \n"); 
+      buff3.append(" -------------------------------------- \n"); 
       lk_dispclr();
       lcd::DisplayText(3, 5, "PRINTING BILL", 1);
-      for (int i = 0; i != allBills.size(); i++) {
-        printf("BillId :%s", allBills[i].id.c_str());
-        printf(" billDate :%s", allBills[i].date_time.c_str());
-        printf(" billAmt :%s\n", allBills[i].net_amt.c_str());
 
-        float net_amt_for_bill = 0;
-
-        sscanf(allBills[i].net_amt.c_str(), "%f", &net_amt_for_bill);
-
-        dailyTotal += net_amt_for_bill;
-        buff3.append("  " + gDeviceId + allBills[i].id + "   " + allBills[i].date_time +
-                     "  :    " + allBills[i].net_amt + '\n');
-      }
-
-      buff3.append(" ------------------------------------\n");
-
-      buffx.append(std::string("  TOTAL      :Rs "));
-      buffx.append(tostr(dailyTotal));
       int ret;
 
       ret = printer::WriteText(buff.c_str(), buff.size(), 2);
@@ -1941,6 +1995,38 @@ void POS_Total_Report() {
 
       ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
       returncheck(ret);
+
+
+      const std::string padding  = "                                   ";
+      for (int i = 0; i != allBills.size(); i++) {
+        buff3 = "";
+        printf("BillId :%s", allBills[i].id.c_str());
+        printf(" billDate :%s", allBills[i].date_time.c_str());
+        printf(" billAmt :%s\n", allBills[i].net_amt.c_str());
+
+        float net_amt_for_bill = 0;
+
+        sscanf(allBills[i].net_amt.c_str(), "%f", &net_amt_for_bill);
+
+        dailyTotal += net_amt_for_bill;
+
+        const std::string billIdCol = gDeviceId + allBills[i].id + padding;
+        const std::string dateTimeCol = allBills[i].date_time + padding;
+        const std::string netAmtCol = padding + allBills[i].net_amt ;
+        buff3.append(billIdCol.substr(0,7) + dateTimeCol.substr(0,23) + netAmtCol.substr(netAmtCol.size() - 9) + '\n');
+        ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+        returncheck(ret);
+
+      }
+      buff3 = "";
+
+      buff3.append(" ------------------------------------\n");
+
+      buffx.append("TOTAL :Rs " + tostr(dailyTotal));
+
+      ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+      returncheck(ret);
+
 
       ret = printer::WriteText(buffx.c_str(), buffx.size(), 2);
       returncheck(ret);
@@ -2039,22 +2125,12 @@ void POS_Stock_Report() {
                 // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
                 buff3.append("\n");
                 buff3.append("   ---------------------------------\n"); 
-                buff3.append("    Code  Name      Stock      Sold \n"); 
+                buff3.append(" Code    Name      Stock      Sold \n"); 
                 buff3.append(" --------------------------------------\n"); 
 
                 lk_dispclr();
                 lcd::DisplayText(3, 5, "PRINTING BILL", 1);
                 // Print report here
-                for (int i = 0; i < soldSummary.size(); ++i)
-                {
-                     buff3.append("    " + soldSummary[i].code + "  " + soldSummary[i].name.substr(0, 9) +
-                     "    " + soldSummary[i].stock +  "        " + tostr(soldSummary[i].sold) + '\n');
-                }
-
-                buffx.append("     -------------------------------\n");
-
-                // buffx.append(std::string("    TOTAL          :Rs "));
-                // buffx.append(tostr(totalSold));
                 int ret;
 
                 ret = printer::WriteText(buff.c_str(), buff.size(), 2);
@@ -2068,6 +2144,26 @@ void POS_Stock_Report() {
 
                 ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
                 returncheck(ret);
+
+                const std::string padding = "                        ";
+                for (int i = 0; i < soldSummary.size(); ++i)
+                {
+                    buff3 = "";
+                    const std::string codeCol = soldSummary[i].code + padding;
+                    const std::string nameCol = soldSummary[i].name.substr(0, 9) + padding;
+                    const std::string stockCol = soldSummary[i].stock + padding;
+                    const std::string soldkCol = tostr(soldSummary[i].sold) + padding;
+
+                     buff3.append( codeCol.substr(0,8) + nameCol.substr(0,14) + stockCol.substr(0,10) + soldkCol.substr(0,10) + '\n');
+                       ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+                        returncheck(ret);
+                }
+
+                buffx.append("     -------------------------------\n");
+
+                // buffx.append(std::string("    TOTAL          :Rs "));
+                // buffx.append(tostr(totalSold));
+
 
                 ret = printer::WriteText(buffx.c_str(), buffx.size(), 1);
                 returncheck(ret);
@@ -2144,23 +2240,24 @@ void POS_Deleted_Bill_Report(){
             // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
             // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
             buff3.append("\n");
-            buff3.append(" --------------------------------------\n"); 
-            buff3.append(" BillNo    Date & Time     Net Amt   \n"); 
-            buff3.append(" --------------------------------------\n"); 
+            buff3.append(" -------------------------------------- \n");
+            buff3.append("BillNo   Date & Time          Amount \n"); 
+            buff3.append(" -------------------------------------- \n"); 
 
-
+            const std::string padding = "                                          ";
             for (int i = 0; i < allBills.size(); ++i)
             {   if (allBills[i].is_deleted == "1"){
+                  const std::string billIdCol = gDeviceId + allBills[i].id + padding;
+                  const std::string dateTimeCol = allBills[i].date_time + padding;
+                  const std::string netAmtCol = padding + allBills[i].net_amt;
+                  buff3.append(billIdCol.substr(0,7) + dateTimeCol.substr(0,23) + netAmtCol.substr(netAmtCol.size() - 9) + '\n');
 
-                    buff3.append("   " + gDeviceId + allBills[i].id + "   " + allBills[i].date_time + 
-                        "     "+ allBills[i].net_amt + '\n');
-
-                    printf(" Bill id :%s", allBills[i].id.c_str());
-                    printf(" billDate :%s", allBills[i].date_time.c_str());
-                    printf(" billAmt :%s", allBills[i].gross_amt.c_str());
-                    printf(" billAmt :%s", allBills[i].add_less.c_str());
-                    printf(" billAmt :%s", allBills[i].net_amt.c_str());
-                    printf(" billAmt :%s\n", allBills[i].user_id.c_str());
+                    // printf(" Bill id :%s", allBills[i].id.c_str());
+                    // printf(" billDate :%s", allBills[i].date_time.c_str());
+                    // printf(" billAmt :%s", allBills[i].gross_amt.c_str());
+                    // printf(" billAmt :%s", allBills[i].add_less.c_str());
+                    // printf(" billAmt :%s", allBills[i].net_amt.c_str());
+                    // printf(" billAmt :%s\n", allBills[i].user_id.c_str());
 
                 }
             }
@@ -2351,12 +2448,11 @@ void Export() {
       lcd::DisplayText(4, 0, "Press any key to copy database to USB", 0);
 
       lk_getkey();
-      ret = system("cp /mnt/jffs2/PayCollect.db /mnt/usb/");
-
       lk_dispclr();
       lcd::DisplayText(3, 2, "Copying ....", 0);
       lcd::DisplayText(5, 0, "This may take 5-8 seconds", 0);
-      sleep(6);
+      ret = system("cp /mnt/jffs2/PayCollect.db /mnt/usb/");
+
 
       if (ret == 0) {
         lk_dispclr();
@@ -2424,15 +2520,15 @@ void Import() {
     lcd::DisplayText(4, 0, "Press any key to copy database to device", 0);
 
     lk_getkey();
-    ret = system("cp /mnt/usb/PayCollect.db /mnt/jffs2/");
-
     lk_dispclr();
     lcd::DisplayText(3, 2, "Copying ....", 0);
     lcd::DisplayText(5, 0, "This may take 5-8 seconds", 0);
-    sleep(6);
+    ret = system("cp /mnt/usb/PayCollect.db /mnt/jffs2/");
+
 
     if (ret == 0) {
       lk_dispclr();
+      closeDatabase();
       lcd::DisplayText(3, 2, "Copying Successfull", 0);
       lcd::DisplayText(5, 0, "Press Any Key to Exit", 0);
       lk_getkey();
@@ -2474,12 +2570,10 @@ void Import() {
       lcd::DisplayText(4, 0, "Press any key to copy database to device", 0);
 
       lk_getkey();
-      ret = system("cp /mnt/usb/PayCollect.db /mnt/jffs2/");
-
       lk_dispclr();
       lcd::DisplayText(3, 2, "Copying ....", 0);
       lcd::DisplayText(5, 0, "This may take 5-8 seconds", 0);
-      sleep(6);
+      ret = system("cp /mnt/usb/PayCollect.db /mnt/jffs2/");
 
       if (ret == 0) {
         lk_dispclr();
