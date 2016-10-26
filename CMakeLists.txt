@@ -43,5 +43,5 @@ set(CMAKE_BUILD_TYPE MinSizeRel)
 # set(CMAKE_C_COMPILER "/home/klok/GL14-SDK/TOOL_CHAIN/gcc-4.1.2-glibc-2.5-nptl-3/arm-none-linux-gnueabi/bin//arm-none-linux-gnueabi-gcc")
 # set(CMAKE_CXX_COMPILER "/home/klok/GL14-SDK/TOOL_CHAIN/gcc-4.1.2-glibc-2.5-nptl-3/arm-none-linux-gnueabi/bin//arm-none-linux-gnueabi-g++")
 
-add_executable(firmware src/main.cpp src/Visiontek.cpp src/main.cpp src/POSDS.cpp src/Config.cpp)
+add_executable(firmware src/main.cpp src/Visiontek.cpp src/main.cpp src/POSDS.cpp src/Config.cpp src/CSVR.cpp src/CSVW.cpp)
 target_link_libraries(firmware SQLiteCpp sqlite3 pthread dl GL14epos visiontekGlue)

@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <ctime>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <map>
 #include <sstream>
 #include <stdlib.h>
@@ -10,6 +12,7 @@
 #include "Config.hpp"
 #include "PosDataStructures.hpp"
 #include "Visiontek.hpp"
+#include "CSVReader.hpp"
 
 extern "C" {
 #include <0202lcd.h>
@@ -20,19 +23,15 @@ extern "C" {
 }
 
 struct Operation {
-    enum Mode
-    {
-        NotSelected = 0,
-        PayCollection,
-        SpotBilling
-    };
+  enum Mode { NotSelected = 0, PayCollection, SpotBilling };
 };
 
 namespace {
 
 std::string gUserId = "", gUserName = "", gTransId = "", gCustomerId = "",
             gCustomerName = "", gCustomerBalance = "", gCustomerContact = "",
-            gCompanyName = "", gCompanyAddress = "", gProductName = "",gDeviceId = "A";
+            gCompanyName = "", gCompanyAddress = "", gProductName = "",
+            gDeviceId = "F";
 
 SQLite::Database* gDatabasePtr = NULL;
 
@@ -44,7 +43,6 @@ std::map<std::string, klok::pc::Product> gAllSelectedProducts;
 typedef std::map<std::string, klok::pc::POSBillEntry>::iterator BillIter_t;
 
 Operation::Mode gMode = Operation::NotSelected;
-
 }
 template <typename T>
 std::string tostr(const T& t) {
@@ -534,7 +532,8 @@ struct BillSummaryDisplayEntry {
 static const char* BillSummaryDisplayEntryToString(
     const BillSummaryDisplayEntry& entry) {
   char displayBuffer[30] = {0};
-  snprintf(displayBuffer, sizeof(displayBuffer) - 1, "%s: %.02f", entry.short_name.substr(0,12).c_str(),
+  snprintf(displayBuffer, sizeof(displayBuffer) - 1, "%s: %.02f",
+           entry.short_name.substr(0, 12).c_str(),
            entry.details.Quantity * entry.details.SalesRate);
   std::string display = displayBuffer;
   return display.c_str();
@@ -547,6 +546,7 @@ void edit_product_quantity(const BillSummaryDisplayEntry& entry) {
   char qty[10] = {0};
   float scanned = 0;
 
+  lcd::DisplayText(1, 0, entry.short_name.substr(0, 12).c_str(), 0);
   lcd::DisplayText(2, 0, "Enter Quantity", 0);
   res = lk_getnumeric(4, 0, (unsigned char*)qty, 10, strlen(qty));
   if (sscanf(qty, "%f", &scanned) == 1 && res > 0) {
@@ -569,7 +569,7 @@ float add_less_pos(float billAmt) {
   int x = lk_getkey();
   lk_dispclr();
 
-if (x == klok::pc::KEYS::KEY_F3) {
+  if (x == klok::pc::KEYS::KEY_F3) {
     int res = 0;
     char addLess[10] = {0};
 
@@ -587,14 +587,11 @@ if (x == klok::pc::KEYS::KEY_F3) {
       lk_getkey();
     }
   } else if (x == klok::pc::KEYS::KEY_ENTER) {
-    
     return 0;
   }
 
   return 0;
 }
-
-
 
 void display_bill_summary() {
   lk_dispclr();
@@ -659,8 +656,6 @@ void display_bill_summary() {
     } else if (klok::pc::KEYS::KEY_F6 == res.lastSpecialKey) {
       const float add_less_amt = add_less_pos(gBillAmt);
 
-
-
       gBillAmt = 0;
 
       for (BillIter_t iter = gBillData.begin(); iter != gBillData.end();
@@ -671,210 +666,216 @@ void display_bill_summary() {
       }
 
       lk_dispclr();
-      lcd::DisplayText(1, 0, ("Gross Amt:   "+ tostr(gBillAmt)).c_str(), 0);
-      lcd::DisplayText(2, 0, ("Discount:    "+ tostr(add_less_amt)).c_str(), 0);
+      lcd::DisplayText(1, 0, ("Gross Amt:   " + tostr(gBillAmt)).c_str(), 0);
+      lcd::DisplayText(2, 0, ("Discount:    " + tostr(add_less_amt)).c_str(),
+                       0);
       lcd::DisplayText(3, 0, "--------------------", 0);
-      lcd::DisplayText(4, 0, ("Total:       "+ tostr(gBillAmt - add_less_amt)).c_str(), 0);
+      lcd::DisplayText(
+          4, 0, ("Total:       " + tostr(gBillAmt - add_less_amt)).c_str(), 0);
       lcd::DisplayText(5, 0, "Press Enter to print", 0);
 
-      
       int x = 0;
 
-      while( true){
+      while (true) {
         x = lk_getkey();
-        if(x == klok::pc::KEYS::KEY_ENTER || x == klok::pc::KEYS::KEY_CANCEL)
+        if (x == klok::pc::KEYS::KEY_ENTER || x == klok::pc::KEYS::KEY_CANCEL)
           break;
       }
 
       if (x == klok::pc::KEYS::KEY_ENTER) {
+        klok::pc::PosBillHeader header;
 
-          klok::pc::PosBillHeader header;
+        header.cust_id = "101001";
+        header.gross_amt = tostr(gBillAmt);
+        header.add_less = tostr(add_less_amt);
+        header.net_amt = tostr(gBillAmt - add_less_amt);
+        header.date_time = getCurrentTime();
+        header.user_id = gUserId;
+        header.device_id = gDeviceId;
+        header.unique_items = tostr(gBillData.size());
+        header.is_deleted = "0";
+        header.deleted_at = "";
 
-          header.cust_id = "101001";
-          header.gross_amt = tostr(gBillAmt);
-          header.add_less = tostr(add_less_amt);
-          header.net_amt = tostr(gBillAmt - add_less_amt);
-          header.date_time = getCurrentTime();
-          header.user_id = gUserId;
-          header.device_id = "KLOK01";
-          header.unique_items = tostr(gBillData.size());
-          header.is_deleted = "0";
-          header.deleted_at = "";
-
-          if (klok::pc::PosBillHeader::InsertIntoTable(getDatabase(), header) ==
-              0) {
-            std::string newBillId = "";
-            if (klok::pc::PosBillHeader::GetLastBillID(getDatabase(), newBillId) !=
-                0) {
-              printf("newBillId  is not fetch failed\n");
-              return;
-            } else if (newBillId == "") {
-              printf("newBillId  is not available\n");
-              return;
-            }
-
-            for (BillIter_t iter = gBillData.begin(); iter != gBillData.end();
-                 ++iter) {
-              klok::pc::PosBillItem item;
-              item.bill_id = newBillId;
-              item.product_id = tostr(iter->first);
-              item.quantity = tostr(iter->second.Quantity);
-              item.net_amt = tostr(iter->second.SalesRate);
-
-              if (klok::pc::PosBillItem::InsertIntoTable(getDatabase(), item) !=
-                  0) {
-                printf("adding item to database failed for bill %s\n",
-                       newBillId.c_str());
-                return;
-              } else {
-                printf("adding item  {%s} to database for bill %s\n",
-                       item.product_id.c_str(), newBillId.c_str());
-              }
-            }
-
-            std::string buff, buff1, buff2, buff3, buff4, buff5;
-
-            prn_open();
-            if (prn_paperstatus() != 0) {
-              lk_dispclr();
-              lcd::DisplayText(3, 5, "No Paper !", 1);
-              lk_getkey();
-              return;
-            }
-
-            klok::pos::Configuration c;
-            klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
-
-            appendToIfFound(buff, c.getData(), "Company_Title_L1");
-            appendToIfFound(buff, c.getData(), "Company_Title_L2");
-            appendToIfFound(buff1, c.getData(), "Company_Addr_L1");
-            appendToIfFound(buff1, c.getData(), "Company_Addr_L2");
-            appendToIfFound(buff1, c.getData(), "Company_Addr_L3");
-            appendToIfFound(buff1, c.getData(), "Company_Contact_L1");
-            appendToIfFound(buff1, c.getData(), "Company_Contact_L2");
-            appendToIfFound(buff1, c.getData(), "Company_Email_L1");
-            buff1.append("\n");
-            appendToIfFound(buff2, c.getData(), "Bill_name_1");
-            appendToIfFound(buff3, c.getData(), "Bill_Line2_1");
-
-            // appendToIfFound(buff2,c.getData(),"Bill_name_2");
-            // appendToIfFound(buff2,c.getData(),"Bill_name_3");
-            // appendToIfFound(buff2,c.getData(),"Report_name_1");
-            // appendToIfFound(buff2,c.getData(),"Report_name_2");
-            // appendToIfFound(buff2,c.getData(),"Report_name_3");
-            // appendToIfFound(buff2,c.getData(),"Report_name_4");
-            // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
-            // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
-            // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
-            // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
-            buff3.append("\n");
-            buff3.append(" ---------------------------------------\n");
-            buff3.append(" Bill No : ");
-            buff3.append(""+ gDeviceId +newBillId);
-            buff3.append("  Date: " + getCurrentTime());
-            buff3.append("\n");
-            buff3.append("   ---------------------------------\n");
-
-            buff3.append("NO    Item Name       Qty   Rate     Total\n\n");
-            const std::string padding = "                              ";
-            for (int i = 0; i != productDisplayList.size(); i++) {
-              // buff3.append("     ");
-              // buff3.append(tostr(i+1) + "      " +
-              //              productDisplayList[i].short_name + "     " +
-              //              tostr(productDisplayList[i].details.Quantity) + "  * " +
-              //              tostr(productDisplayList[i].details.SalesRate) + " :  " +
-              //              tostr(productDisplayList[i].details.Quantity *
-              //                    productDisplayList[i].details.SalesRate));
-              // buff3.append("\n");
-              const std::string serNoCol = tostr(i+1) + padding;
-              const std::string nameCol = " " + productDisplayList[i].short_name + padding;
-              const std::string quantityCol = padding + tostr(productDisplayList[i].details.Quantity);
-              const std::string salesRateCol = tostr(productDisplayList[i].details.SalesRate) + padding;
-              const std::string totalAmtCol = padding + tostr(productDisplayList[i].details.Quantity * productDisplayList[i].details.SalesRate);
-
-
-
-              buff3.append(serNoCol.substr(0,4) +
-                          " " + nameCol.substr(0,14) +
-                          quantityCol.substr(quantityCol.size() - 5) +
-                          "   " + salesRateCol.substr(0,6) +
-                          totalAmtCol.substr(totalAmtCol.size() - 8) + "\n");
-            }
-
-            const std::string grosBillAmtCol = padding + tostr(gBillAmt);
-            const std::string cashDiscountCol = padding + tostr(add_less_amt);
-
-            buff3.append("   ---------------------------------\n");
-            buff3.append("   Net Amount                 " + grosBillAmtCol.substr(grosBillAmtCol.size()-10));
-            buff3.append("\n");
-            buff3.append("   Cash Discount              " + cashDiscountCol.substr(cashDiscountCol.size()-10));
-            buff3.append("\n");
-            buff3.append("   ---------------------------------\n");
-            buff4.append("TOTAL   :");
-            const std::string billTotalCol = padding + tostr(gBillAmt - add_less_amt);
-            buff4.append(billTotalCol.substr(billTotalCol.size() - 10));
-            buff4.append("\n");
-            buff5.append("  User  : ");
-            buff5.append(gUserName);
-            buff5.append("\n");
-            buff5.append("   ---------------------------------\n");
-            appendToIfFound(buff5, c.getData(), "Print_Footer_L1");
-            appendToIfFound(buff5, c.getData(), "Print_Footer_L2");
-            appendToIfFound(buff5, c.getData(), "Print_Footer_L3");
-            appendToIfFound(buff5, c.getData(), "Print_Footer_L4");
-
-            lk_dispclr();
-            lcd::DisplayText(3, 5, "PRINTING BILL", 1);
-
-            int ret;
-
-            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
-            returncheck(ret);
-
-            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
-            returncheck(ret);
-
-            ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
-            returncheck(ret);
-
-            ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
-            returncheck(ret);
-
-            ret = printer::WriteText(buff4.c_str(), buff4.size(), 2);
-            returncheck(ret);
-
-            ret = printer::WriteText(buff5.c_str(), buff5.size(), 1);
-            returncheck(ret);
-
-            ret = printer::WriteText("\n\n\n", 3, 1);
-            returncheck(ret);
-            ret = prn_paper_feed(1);
-            prn_close();
-
-            gBillAmt = 0;
-            gBillData.clear();
-            gAllSelectedProducts.clear();
-
-            if (ret == -3) {
-              printf("out of the paper");
-            } else {
-              return;
-            }
-
-          } else {
-            printf("failed to InsertIntoTable\n");
+        if (klok::pc::PosBillHeader::InsertIntoTable(getDatabase(), header) ==
+            0) {
+          std::string newBillId = "";
+          if (klok::pc::PosBillHeader::GetLastBillID(getDatabase(),
+                                                     newBillId) != 0) {
+            printf("newBillId  is not fetch failed\n");
+            return;
+          } else if (newBillId == "") {
+            printf("newBillId  is not available\n");
+            return;
           }
 
-          printf("bill saved\n");
+          for (BillIter_t iter = gBillData.begin(); iter != gBillData.end();
+               ++iter) {
+            klok::pc::PosBillItem item;
+            item.bill_id = newBillId;
+            item.product_id = tostr(iter->first);
+            item.quantity = tostr(iter->second.Quantity);
+            item.sales_rate = tostr(iter->second.SalesRate);
 
-          return;
+            if (klok::pc::PosBillItem::InsertIntoTable(getDatabase(), item) !=
+                0) {
+              printf("adding item to database failed for bill %s\n",
+                     newBillId.c_str());
+              return;
+            } else {
+              printf("adding item  {%s} to database for bill %s\n",
+                     item.product_id.c_str(), newBillId.c_str());
+            }
+          }
+
+          std::string buff, buff1, buff2, buff3, buff4, buff5;
+
+          prn_open();
+          if (prn_paperstatus() != 0) {
+            lk_dispclr();
+            lcd::DisplayText(3, 5, "No Paper !", 1);
+            lk_getkey();
+            return;
+          }
+
+          klok::pos::Configuration c;
+          klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
+
+          appendToIfFound(buff, c.getData(), "Company_Title_L1");
+          appendToIfFound(buff, c.getData(), "Company_Title_L2");
+          appendToIfFound(buff1, c.getData(), "Company_Addr_L1");
+          appendToIfFound(buff1, c.getData(), "Company_Addr_L2");
+          appendToIfFound(buff1, c.getData(), "Company_Addr_L3");
+          appendToIfFound(buff1, c.getData(), "Company_Contact_L1");
+          appendToIfFound(buff1, c.getData(), "Company_Contact_L2");
+          appendToIfFound(buff1, c.getData(), "Company_Email_L1");
+          buff1.append("\n");
+          appendToIfFound(buff2, c.getData(), "Bill_name_1");
+          appendToIfFound(buff3, c.getData(), "Bill_Line2_1");
+
+          // appendToIfFound(buff2,c.getData(),"Bill_name_2");
+          // appendToIfFound(buff2,c.getData(),"Bill_name_3");
+          // appendToIfFound(buff2,c.getData(),"Report_name_1");
+          // appendToIfFound(buff2,c.getData(),"Report_name_2");
+          // appendToIfFound(buff2,c.getData(),"Report_name_3");
+          // appendToIfFound(buff2,c.getData(),"Report_name_4");
+          // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
+          // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
+          // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
+          // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
+          buff3.append("\n");
+          buff3.append(" ---------------------------------------\n");
+          buff3.append(" Bill No : ");
+          buff3.append("" + gDeviceId + newBillId);
+          buff3.append("  Date: " + getCurrentTime());
+          buff3.append("\n");
+          buff3.append("   ---------------------------------\n");
+
+          buff3.append("NO    Item Name       Qty   Rate     Total\n\n");
+          const std::string padding = "                              ";
+          for (int i = 0; i != productDisplayList.size(); i++) {
+            // buff3.append("     ");
+            // buff3.append(tostr(i+1) + "      " +
+            //              productDisplayList[i].short_name + "     " +
+            //              tostr(productDisplayList[i].details.Quantity) + "  *
+            //              " +
+            //              tostr(productDisplayList[i].details.SalesRate) + " :
+            //              " +
+            //              tostr(productDisplayList[i].details.Quantity *
+            //                    productDisplayList[i].details.SalesRate));
+            // buff3.append("\n");
+            const std::string serNoCol = tostr(i + 1) + padding;
+            const std::string nameCol =
+                " " + productDisplayList[i].short_name + padding;
+            const std::string quantityCol =
+                padding + tostr(productDisplayList[i].details.Quantity);
+            const std::string salesRateCol =
+                tostr(productDisplayList[i].details.SalesRate) + padding;
+            const std::string totalAmtCol =
+                padding + tostr(productDisplayList[i].details.Quantity *
+                                productDisplayList[i].details.SalesRate);
+
+            buff3.append(serNoCol.substr(0, 4) + " " + nameCol.substr(0, 14) +
+                         quantityCol.substr(quantityCol.size() - 5) + "   " +
+                         salesRateCol.substr(0, 6) +
+                         totalAmtCol.substr(totalAmtCol.size() - 8) + "\n");
+          }
+
+          const std::string grosBillAmtCol = padding + tostr(gBillAmt);
+          const std::string cashDiscountCol = padding + tostr(add_less_amt);
+
+          buff3.append("   ---------------------------------\n");
+          buff3.append("   Net Amount                  " +
+                       grosBillAmtCol.substr(grosBillAmtCol.size() - 10));
+          buff3.append("\n");
+          buff3.append("   Cash Discount               " +
+                       cashDiscountCol.substr(cashDiscountCol.size() - 10));
+          buff3.append("\n");
+          buff3.append("   ---------------------------------\n");
+          buff4.append("TOTAL   :");
+          const std::string billTotalCol =
+              padding + tostr(gBillAmt - add_less_amt);
+          buff4.append(billTotalCol.substr(billTotalCol.size() - 10));
+          buff4.append("\n");
+          buff5.append("  User  : ");
+          buff5.append(gUserName);
+          buff5.append("\n");
+          buff5.append("   ---------------------------------\n");
+          appendToIfFound(buff5, c.getData(), "Print_Footer_L1");
+          appendToIfFound(buff5, c.getData(), "Print_Footer_L2");
+          appendToIfFound(buff5, c.getData(), "Print_Footer_L3");
+          appendToIfFound(buff5, c.getData(), "Print_Footer_L4");
+
+          lk_dispclr();
+          lcd::DisplayText(3, 5, "PRINTING BILL", 1);
+
+          int ret;
+
+          ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+          returncheck(ret);
+
+          ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+          returncheck(ret);
+
+          ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
+          returncheck(ret);
+
+          ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+          returncheck(ret);
+
+          ret = printer::WriteText(buff4.c_str(), buff4.size(), 2);
+          returncheck(ret);
+
+          ret = printer::WriteText(buff5.c_str(), buff5.size(), 1);
+          returncheck(ret);
+
+          ret = printer::WriteText("\n\n\n", 3, 1);
+          returncheck(ret);
+          ret = prn_paper_feed(1);
+          prn_close();
+
+          gBillAmt = 0;
+          gBillData.clear();
+          gAllSelectedProducts.clear();
+
+          if (ret == -3) {
+            printf("out of the paper");
+          } else {
+            return;
+          }
 
         } else {
-          return;
+          printf("failed to InsertIntoTable\n");
         }
+
+        printf("bill saved\n");
+
+        return;
+
+      } else {
+        return;
+      }
     } else {
-    
-    return ;
+      return;
     }
   }
 }
@@ -888,20 +889,21 @@ void ask_product_quantity(const klok::pc::Product& inProduct) {
 
   const std::string stockDisp = "Init Stock : " + inProduct.stock_quantity;
 
-  const float soldStock = klok::pc::PosBillItem::GetTotalSold(getDatabase(),inProduct.id.c_str());
+  const float soldStock =
+      klok::pc::PosBillItem::GetTotalSold(getDatabase(), inProduct.id.c_str());
 
   const std::string soldStockDisp = "Sold : " + tostr(soldStock);
 
   std::string prod_name = "";
-  if(inProduct.name.size() >= 12 )
-    prod_name = inProduct.name.substr(inProduct.name.size() - 13) ;
+  if (inProduct.name.size() >= 12)
+    prod_name = inProduct.name.substr(0, 12);
   else
     prod_name = inProduct.name;
 
   lcd::DisplayText(0, 0, "Enter Quantity", 0);
-  lcd::DisplayText(1, 0, (prod_name +" :" + inProduct.sales_rate).c_str(), 0);
-  lcd::DisplayText(2, 0,stockDisp.c_str() , 0);
-  lcd::DisplayText(3, 0,soldStockDisp.c_str() , 0);
+  lcd::DisplayText(1, 0, (prod_name + " :" + inProduct.sales_rate).c_str(), 0);
+  lcd::DisplayText(2, 0, stockDisp.c_str(), 0);
+  lcd::DisplayText(3, 0, soldStockDisp.c_str(), 0);
   res = lk_getnumeric(5, 0, (unsigned char*)qty, 10, strlen(qty));
   if (sscanf(qty, "%f", &scanned) == 1 && res > 0) {
     printf("Quantity Entered%f \n", scanned);
@@ -916,94 +918,90 @@ void ask_product_quantity(const klok::pc::Product& inProduct) {
   }
 }
 
-void BillingByCode(){
+void BillingByCode() {
+  while (true) {
+    lk_dispclr();
+    char data[256] = {0};
+    lcd::DisplayText(2, 0, "Enter Code", 0);
+    int res = lk_getnumeric(4, 0, (unsigned char*)data, 10, strlen(data));
+    if (res > 0) {
+      printf("Code : %s \n", data);
 
-    while(true){
+      klok::pc::Product outP;
+      if (klok::pc::Product::FromDatabaseWithCode(getDatabase(), data, outP) !=
+          0) {
         lk_dispclr();
-        char data[256] = {0};
-        lcd::DisplayText(2, 0, "Enter Code", 0);
-        int res = lk_getnumeric(4, 0, (unsigned char*)data, 10, strlen(data));
-        if (res > 0) {
-          printf("Code : %s \n", data);
-
-          klok::pc::Product outP;
-          if(klok::pc::Product::FromDatabaseWithCode(getDatabase(),data,outP) != 0){
-              lk_dispclr();
-              lcd::DisplayText(1, 0, "Wrong Code", 0);
-              lcd::DisplayText(3, 0, "Try Again - Enter", 0);
-              lcd::DisplayText(4, 0, "Cancel - Any other key", 0);
-               if(lk_getkey() == klok::pc::KEYS::KEY_ENTER){
-                   continue;
-               }
-               else {
-                   return;
-               }
-
-          }
-
-          ask_product_quantity(outP);
-          break;
-
+        lcd::DisplayText(1, 0, "Wrong Code", 0);
+        lcd::DisplayText(3, 0, "Try Again - Enter", 0);
+        lcd::DisplayText(4, 0, "Cancel - Any other key", 0);
+        if (lk_getkey() == klok::pc::KEYS::KEY_ENTER) {
+          continue;
+        } else {
+          return;
         }
+      }
+
+      ask_product_quantity(outP);
+      break;
     }
+  }
 }
 
-void Bill_By_Search_Name(){
-    while(true){
-        lk_dispclr();
-        char data[256] = {0};
-        lcd::DisplayText(2, 0, "Enter Search", 0);
-        int res = lk_getalpha(3,0,(unsigned char *)data,10,strlen(data),0);
-        if (res > 0) {
-          printf("Code : %s \n", data);
+void Bill_By_Search_Name() {
+  while (true) {
+    lk_dispclr();
+    char data[256] = {0};
+    lcd::DisplayText(2, 0, "Enter Search", 0);
+    int res = lk_getalpha(3, 0, (unsigned char*)data, 10, strlen(data), 0);
+    if (res > 0) {
+      printf("Code : %s \n", data);
 
-          std::vector<klok::pc::Product> allProducts;
+      std::vector<klok::pc::Product> allProducts;
 
-          if(klok::pc::Product::GetMatchingSearch(getDatabase(),data,allProducts,500) == 0 && allProducts.size()){
+      if (klok::pc::Product::GetMatchingSearch(getDatabase(), data, allProducts,
+                                               500) == 0 &&
+          allProducts.size()) {
+        klok::pc::MenuResult res;
+        res.wasCancelled = false;
+        res.selectedIndex = -1;
 
-              klok::pc::MenuResult res;
-              res.wasCancelled = false;
-              res.selectedIndex = -1;
+        char totalAmountLabel[30] = {0};
+        snprintf(totalAmountLabel, sizeof(totalAmountLabel) - 1,
+                 "Total Amt : %.02f", gBillAmt);
 
-              char totalAmountLabel[30] = {0};
-              snprintf(totalAmountLabel, sizeof(totalAmountLabel) - 1,
-                       "Total Amt : %.02f", gBillAmt);
+        klok::pc::display_sub_range_with_title(allProducts, totalAmountLabel, 5,
+                                               res, &getPosProductDisplayName);
 
-              klok::pc::display_sub_range_with_title(allProducts, totalAmountLabel, 5,
-                                                     res, &getPosProductDisplayName);
+        if (!res.wasCancelled) {
+          gProductName = allProducts[res.selectedIndex].name;
+          ask_product_quantity(allProducts[res.selectedIndex]);
+        } else if (klok::pc::KEYS::KEY_F6 == res.lastSpecialKey) {
+          printf("User wants to proceed to billing\n");
+          display_bill_summary();
+          printf("User finished with billing\n");
 
-              if (!res.wasCancelled) {
-                gProductName = allProducts[res.selectedIndex].name;
-                ask_product_quantity(allProducts[res.selectedIndex]);
-              } else if (klok::pc::KEYS::KEY_F6 == res.lastSpecialKey) {
-                printf("User wants to proceed to billing\n");
-                display_bill_summary();
-                printf("User finished with billing\n");
-
-              } else {
-                break;
-              }
-
-          }
-          else {
-              lk_dispclr();
-              lcd::DisplayText(1, 0, "No match found", 0);
-
-              lcd::DisplayText(3, 0, "Continue - Enter", 0);
-              lcd::DisplayText(4, 0, "Cancel - Any Key", 0);
-
-              if(lk_getkey() == klok::pc::KEYS::KEY_ENTER){
-                  continue;
-              }
-              else
-              {
-                  return;
-              }
-          }
-
+        } else {
           break;
         }
+
+      } else {
+        lk_dispclr();
+        lcd::DisplayText(1, 0, "No match found", 0);
+
+        lcd::DisplayText(3, 0, "Continue - Enter", 0);
+        lcd::DisplayText(4, 0, "Cancel - Any Key", 0);
+
+        if (lk_getkey() == klok::pc::KEYS::KEY_ENTER) {
+          continue;
+        } else {
+          return;
+        }
+      }
+
+      break;
     }
+    else return;
+  }
 }
 
 void Bill_By_Item_List() {
@@ -1048,104 +1046,99 @@ void Bill_By_Item_List() {
   }
 }
 
-void Pos_Billing_Type_Choice(){
+void Pos_Billing_Type_Choice() {
+  printf("Billing Choice\n");
 
-    printf("Billing Choice\n");
+  std::vector<std::string> options;
+  options.push_back("By Code");
+  options.push_back("By Name");
+  options.push_back("List All");
+  while (1) {
+    klok::pc::MenuResult res;
+    res.wasCancelled = false;
+    res.selectedIndex = -1;
 
+    char totalAmountLabel[30] = {0};
+    snprintf(totalAmountLabel, sizeof(totalAmountLabel) - 1,
+             "Total Amt : %.02f", gBillAmt);
 
-    std::vector<std::string> options;
-    options.push_back("By Code");
-    options.push_back("By Name");
-    options.push_back("List All");
-    while (1) {
+    klok::pc::display_sub_range_with_title(options, "F6 - Go to bill", 4, res,
+                                           &getPosTransactionDatesDisplayName);
 
-      klok::pc::MenuResult res;
-      res.wasCancelled = false;
-      res.selectedIndex = -1;
-
-      char totalAmountLabel[30] = {0};
-      snprintf(totalAmountLabel, sizeof(totalAmountLabel) - 1,
-               "Total Amt : %.02f", gBillAmt);
-
-      klok::pc::display_sub_range_with_title(options, "F6 - Go to bill", 4,
-                                             res, &getPosTransactionDatesDisplayName);
-
-      if (!res.wasCancelled) {
-           switch (res.selectedIndex) {
-              case 0:
-                BillingByCode();
-                break;
-              case 2:
-                Bill_By_Item_List();
-                break;
-              case 1:
-                Bill_By_Search_Name();
-                break;
-
-            }
-      } else if (klok::pc::KEYS::KEY_F6 == res.lastSpecialKey) {
-        printf("User wants to proceed to billing\n");
-        display_bill_summary();
-        printf("User finished with billing\n");
-
-      } else {
-        break;
+    if (!res.wasCancelled) {
+      switch (res.selectedIndex) {
+        case 0:
+          BillingByCode();
+          break;
+        case 2:
+          Bill_By_Item_List();
+          break;
+        case 1:
+          Bill_By_Search_Name();
+          break;
       }
+    } else if (klok::pc::KEYS::KEY_F6 == res.lastSpecialKey) {
+      printf("User wants to proceed to billing\n");
+      display_bill_summary();
+      printf("User finished with billing\n");
+
+    } else {
+      break;
     }
-/*
-    MENU_T menu;
-    int opt = 0;
-    int selItem = 0;
-    int acceptKbdEvents = 0;
+  }
+  /*
+      MENU_T menu;
+      int opt = 0;
+      int selItem = 0;
+      int acceptKbdEvents = 0;
 
 
-
-    while (1) {
-      lk_dispclr();
-
-      menu.start = 0;
-      menu.maxEntries = 3;
-      strcpy(menu.title,"F6 - goto bill");
-      strcpy(menu.menu[0], "By Code");
-      strcpy(menu.menu[1], "List All");
-      strcpy(menu.menu[2], "By Name Search");
 
       while (1) {
         lk_dispclr();
 
-        lcd::DisplayText(5, 0, "F6 to Continue", 0);
-        opt = scroll_menu(&menu, &selItem, acceptKbdEvents);
+        menu.start = 0;
+        menu.maxEntries = 3;
+        strcpy(menu.title,"F6 - goto bill");
+        strcpy(menu.menu[0], "By Code");
+        strcpy(menu.menu[1], "List All");
+        strcpy(menu.menu[2], "By Name Search");
 
-        switch (opt) {
-          case CANCEL:l
-            
+        while (1) {
+          lk_dispclr();
 
-          case klok::pc::KEYS::KEY_F6 :
-            if(gBillData.size()){
-              display_bill_summary();
-            }
-            else
-            {
-              lk_dispclr();
-              lcd::DisplayText(5, 0, "No Items Selected", 0);
-              lk_getkey();
-              continue;
-            }
+          lcd::DisplayText(5, 0, "F6 to Continue", 0);
+          opt = scroll_menu(&menu, &selItem, acceptKbdEvents);
 
-              break;
-          
+          switch (opt) {
+            case CANCEL:l
 
+
+            case klok::pc::KEYS::KEY_F6 :
+              if(gBillData.size()){
+                display_bill_summary();
+              }
+              else
+              {
+                lk_dispclr();
+                lcd::DisplayText(5, 0, "No Items Selected", 0);
+                lk_getkey();
+                continue;
+              }
+
+                break;
+
+
+          }
         }
       }
-    }
-*/
+  */
 }
 
 void Billing() {
+  Pos_Billing_Type_Choice();
 
-Pos_Billing_Type_Choice();
-
-return;
+  return;
 
   printf("Billing\n");
   gBillData.clear();
@@ -1613,7 +1606,8 @@ void getYearWiseDetails(std::string year) {
 
 void ListYears() {
   std::vector<std::string> yearsUnique;
-  if (klok::pc::Transaction::ListUniqueYears(getDatabase(), yearsUnique, 20) == 0) {
+  if (klok::pc::Transaction::ListUniqueYears(getDatabase(), yearsUnique, 20) ==
+      0) {
     for (int i = 0; i != yearsUnique.size(); i++) {
       printf("Transaction No :%s\n", yearsUnique[i].c_str());
     }
@@ -1835,99 +1829,102 @@ void POS_Daily_Report() {
       float dailyTotal = 0;
       std::vector<klok::pc::PosBillHeader> billsForDate;
       if (klok::pc::PosBillHeader::GetTransactionsForDate(
-              getDatabase(), billsForDate, dateToQuery.c_str(), 100) == 0) {
-
-          std::string buff, buff1, buff2, buff3, buff4, buff5, buffx;
-          prn_open();
-          if (prn_paperstatus() != 0) {
-            lk_dispclr();
-            lcd::DisplayText(3, 5, "No Paper !", 1);
-            lk_getkey();
-            return;
-          }
-
-          klok::pos::Configuration c;
-          klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
-
-          appendToIfFound(buff, c.getData(), "Company_Title_L1");
-          appendToIfFound(buff, c.getData(), "Company_Title_L2");
-          appendToIfFound(buff1, c.getData(), "Company_Addr_L1");
-          appendToIfFound(buff1, c.getData(), "Company_Addr_L2");
-          appendToIfFound(buff1, c.getData(), "Company_Addr_L3");
-          appendToIfFound(buff1, c.getData(), "Company_Contact_L1");
-          appendToIfFound(buff1, c.getData(), "Company_Contact_L2");
-          appendToIfFound(buff1, c.getData(), "Company_Email_L1");
-          // appendToIfFound(buff2,c.getData(),"Bill_name_1");
-          // appendToIfFound(buff2,c.getData(),"Bill_name_2");
-          // appendToIfFound(buff2,c.getData(),"Bill_name_3");
-          buff1.append("\n");
-          appendToIfFound(buff2, c.getData(), "Report_name_1");
-          // appendToIfFound(buff2,c.getData(),"Report_name_2");
-          // appendToIfFound(buff2,c.getData(),"Report_name_3");
-          // appendToIfFound(buff2,c.getData(),"Report_name_4");
-          // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
-          // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
-          // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
-          // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
-          buff3.append("\n");
-          buff3.append("     Report Date         :");
-          buff3.append(dateToQuery);
-          buff3.append("\n");
-          buff3.append(" --------------------------------------\n"); 
-          buff3.append(" BillNo    Date & Time      Net Amt   \n"); 
-          buff3.append(" --------------------------------------\n"); 
-
+              getDatabase(), billsForDate, dateToQuery.c_str(), 2000) == 0) {
+        std::string buff, buff1, buff2, buff3, buff4, buff5, buffx;
+        prn_open();
+        if (prn_paperstatus() != 0) {
           lk_dispclr();
-          lcd::DisplayText(3, 5, "PRINTING BILL", 1);
-          const std::string padding = "                            ";
-          for (int i = 0; i < billsForDate.size(); ++i) {
-            if(billsForDate[i].is_deleted == "1")
-              continue;
-            float net_amt_for_bill = 0;
+          lcd::DisplayText(3, 5, "No Paper !", 1);
+          lk_getkey();
+          return;
+        }
 
-            sscanf(billsForDate[i].net_amt.c_str(), "%f", &net_amt_for_bill);
+        klok::pos::Configuration c;
+        klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
 
-            dailyTotal += net_amt_for_bill;
+        appendToIfFound(buff, c.getData(), "Company_Title_L1");
+        appendToIfFound(buff, c.getData(), "Company_Title_L2");
+        appendToIfFound(buff1, c.getData(), "Company_Addr_L1");
+        appendToIfFound(buff1, c.getData(), "Company_Addr_L2");
+        appendToIfFound(buff1, c.getData(), "Company_Addr_L3");
+        appendToIfFound(buff1, c.getData(), "Company_Contact_L1");
+        appendToIfFound(buff1, c.getData(), "Company_Contact_L2");
+        appendToIfFound(buff1, c.getData(), "Company_Email_L1");
+        // appendToIfFound(buff2,c.getData(),"Bill_name_1");
+        // appendToIfFound(buff2,c.getData(),"Bill_name_2");
+        // appendToIfFound(buff2,c.getData(),"Bill_name_3");
+        buff1.append("\n");
+        appendToIfFound(buff2, c.getData(), "Report_name_1");
+        // appendToIfFound(buff2,c.getData(),"Report_name_2");
+        // appendToIfFound(buff2,c.getData(),"Report_name_3");
+        // appendToIfFound(buff2,c.getData(),"Report_name_4");
+        // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
+        // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
+        // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
+        // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
+        buff3.append("\n");
+        buff3.append("     Report Date         :");
+        buff3.append(dateToQuery);
+        buff3.append("\n");
+        buff3.append(" --------------------------------------\n");
+        buff3.append(" BillNo    Date & Time      Net Amt   \n");
+        buff3.append(" --------------------------------------\n");
 
-            const std::string  billIdCol = gDeviceId + billsForDate[i].id + padding;
-            const std::string  dateTimeCol = billsForDate[i].date_time + padding;
-            const std::string  netAmtCol = padding + billsForDate[i].net_amt ;
+        lk_dispclr();
+        lcd::DisplayText(3, 5, "PRINTING BILL", 1);
+        int ret;
+        ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+        returncheck(ret);
 
-            buff3.append(billIdCol.substr(0,8) + dateTimeCol.substr(0,22) + netAmtCol.substr(netAmtCol.size() - 10) + '\n');
-          }
+        ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+        returncheck(ret);
 
-          buff3.append("     -------------------------------\n");
+        ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
+        returncheck(ret);
 
-          buffx.append(std::string("TOTAL   :Rs "));
-          buffx.append(tostr(dailyTotal));
-          int ret;
+        ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+        returncheck(ret);
+        const std::string padding = "                            ";
+        for (int i = 0; i < billsForDate.size(); ++i) {
+          if (billsForDate[i].is_deleted == "1")
+            continue;
+          float net_amt_for_bill = 0;
 
-          ret = printer::WriteText(buff.c_str(), buff.size(), 2);
-          returncheck(ret);
+          sscanf(billsForDate[i].net_amt.c_str(), "%f", &net_amt_for_bill);
 
-          ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
-          returncheck(ret);
+          dailyTotal += net_amt_for_bill;
 
-          ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
-          returncheck(ret);
+          const std::string billIdCol =
+              gDeviceId + billsForDate[i].id + padding;
+          const std::string dateTimeCol = billsForDate[i].date_time + padding;
+          const std::string netAmtCol = padding + billsForDate[i].net_amt;
 
+          buff3 = billIdCol.substr(0, 8) + dateTimeCol.substr(0, 22) +
+                  netAmtCol.substr(netAmtCol.size() - 10) + '\n';
           ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
           returncheck(ret);
+        }
 
-          ret = printer::WriteText(buffx.c_str(), buffx.size(), 2);
-          returncheck(ret);
+        buff3 = "     -------------------------------\n";
+        ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+        returncheck(ret);
 
-          ret = printer::WriteText("\n\n\n", 3, 1);
-          returncheck(ret);
-          ret = prn_paper_feed(1);
-          prn_close();
+        buffx.append(std::string("TOTAL   :Rs "));
+        buffx.append(tostr(dailyTotal));
 
-          if (ret == -3) {
-            printf("out of the paper");
-          } else {
-            return;
-          }
+        ret = printer::WriteText(buffx.c_str(), buffx.size(), 2);
+        returncheck(ret);
 
+        ret = printer::WriteText("\n\n\n", 3, 1);
+        returncheck(ret);
+        ret = prn_paper_feed(1);
+        prn_close();
+
+        if (ret == -3) {
+          printf("out of the paper");
+        } else {
+          return;
+        }
       }
     }
   }
@@ -1937,9 +1934,9 @@ void POS_Total_Report() {
   float dailyTotal = 0;
   std::vector<klok::pc::PosBillHeader> allBills;
   if (klok::pc::PosBillHeader::GetAllNonDeleted(getDatabase(), allBills,
-                                                  1000) == 0) {
+                                                5000) == 0) {
     lk_dispclr();
-    lcd::DisplayText(1,0,"Press Enter to print",1);
+    lcd::DisplayText(1, 0, "Press Enter to print", 1);
     int x = lk_getkey();
 
     if (x == klok::pc::KEYS::KEY_ENTER) {
@@ -1977,8 +1974,8 @@ void POS_Total_Report() {
       // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
       buff3.append("\n");
       buff3.append(" -------------------------------------- \n");
-      buff3.append("BillNo   Date & Time          Amount \n"); 
-      buff3.append(" -------------------------------------- \n"); 
+      buff3.append("BillNo   Date & Time          Amount \n");
+      buff3.append(" -------------------------------------- \n");
       lk_dispclr();
       lcd::DisplayText(3, 5, "PRINTING BILL", 1);
 
@@ -1996,8 +1993,7 @@ void POS_Total_Report() {
       ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
       returncheck(ret);
 
-
-      const std::string padding  = "                                   ";
+      const std::string padding = "                                   ";
       for (int i = 0; i != allBills.size(); i++) {
         buff3 = "";
         printf("BillId :%s", allBills[i].id.c_str());
@@ -2012,11 +2008,11 @@ void POS_Total_Report() {
 
         const std::string billIdCol = gDeviceId + allBills[i].id + padding;
         const std::string dateTimeCol = allBills[i].date_time + padding;
-        const std::string netAmtCol = padding + allBills[i].net_amt ;
-        buff3.append(billIdCol.substr(0,7) + dateTimeCol.substr(0,23) + netAmtCol.substr(netAmtCol.size() - 9) + '\n');
+        const std::string netAmtCol = padding + allBills[i].net_amt;
+        buff3.append(billIdCol.substr(0, 7) + dateTimeCol.substr(0, 23) +
+                     netAmtCol.substr(netAmtCol.size() - 9) + '\n');
         ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
         returncheck(ret);
-
       }
       buff3 = "";
 
@@ -2026,7 +2022,6 @@ void POS_Total_Report() {
 
       ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
       returncheck(ret);
-
 
       ret = printer::WriteText(buffx.c_str(), buffx.size(), 2);
       returncheck(ret);
@@ -2052,259 +2047,247 @@ void POS_Total_Report() {
 }
 
 struct StockInfo {
-    std::string code;
-    std::string name;
-    float sold;
-    std::string stock;
+  std::string code;
+  std::string name;
+  float sold;
+  std::string stock;
 };
 void POS_Stock_Report() {
+  lk_dispclr();
+  lcd::DisplayText(1, 0, "Press Enter to print", 1);
+  std::vector<StockInfo> soldSummary;
+  typedef std::vector<klok::pc::Product>::iterator Iter_t;
 
+  if (lk_getkey() == klok::pc::KEYS::KEY_ENTER) {
+    std::vector<klok::pc::Product> allProducts;
 
-    lk_dispclr();
-    lcd::DisplayText(1,0,"Press Enter to print",1);
-    std::vector<StockInfo> soldSummary;
-    typedef std::vector<klok::pc::Product>::iterator Iter_t;
-
-    if(lk_getkey() == klok::pc::KEYS::KEY_ENTER){
-        std::vector<klok::pc::Product> allProducts;
-
-        if(klok::pc::Product::GetAllFromDatabase(getDatabase(),allProducts,1000) == 0){
-
-            if(allProducts.size()){
-                for(Iter_t it = allProducts.begin();it != allProducts.end();++it){
-
-                    float totalSold = klok::pc::PosBillItem::GetTotalSold(getDatabase(),it->id.c_str());
-                    if(totalSold != -1 && totalSold > 0){
-                        StockInfo entry;
-                        entry.code = it->code;
-                        entry.name = it->name;
-                        entry.stock = it->stock_quantity;
-                        entry.sold = totalSold;
-                        soldSummary.push_back(entry);
-                    }
-                }
-
-                if(!soldSummary.size()){
-                    lcd::DisplayText(3,0,"No sales data",1);
-                    lk_getkey();
-                    return;
-                }
-
-                    std::string buff, buff1, buff2, buff3, buffx;
-                    prn_open();
-
-                    if (prn_paperstatus() != 0) {
-                        lk_dispclr();
-                        lcd::DisplayText(3, 5, "No Paper !", 1);
-                        lk_getkey();
-                        return;
-                    }
-
-                klok::pos::Configuration c;
-                klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
-
-                appendToIfFound(buff, c.getData(), "Company_Title_L1");
-                appendToIfFound(buff, c.getData(), "Company_Title_L2");
-                appendToIfFound(buff1, c.getData(), "Company_Addr_L1");
-                appendToIfFound(buff1, c.getData(), "Company_Addr_L2");
-                appendToIfFound(buff1, c.getData(), "Company_Addr_L3");
-                appendToIfFound(buff1, c.getData(), "Company_Contact_L1");
-                appendToIfFound(buff1, c.getData(), "Company_Contact_L2");
-                appendToIfFound(buff1, c.getData(), "Company_Email_L1");
-                // appendToIfFound(buff2,c.getData(),"Bill_name_1");
-                // appendToIfFound(buff2,c.getData(),"Bill_name_2");
-                // appendToIfFound(buff2,c.getData(),"Bill_name_3");
-                // appendToIfFound(buff2, c.getData(), "Report_name_1");
-                // appendToIfFound(buff2,c.getData(),"Report_name_2");
-                buff2.append("\n");
-                appendToIfFound(buff2,c.getData(),"Report_name_3");
-                // appendToIfFound(buff2,c.getData(),"Report_name_4");
-                // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
-                // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
-                // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
-                // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
-                buff3.append("\n");
-                buff3.append("   ---------------------------------\n"); 
-                buff3.append(" Code    Name      Stock      Sold \n"); 
-                buff3.append(" --------------------------------------\n"); 
-
-                lk_dispclr();
-                lcd::DisplayText(3, 5, "PRINTING BILL", 1);
-                // Print report here
-                int ret;
-
-                ret = printer::WriteText(buff.c_str(), buff.size(), 2);
-                returncheck(ret);
-
-                ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
-                returncheck(ret);
-
-                ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
-                returncheck(ret);
-
-                ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
-                returncheck(ret);
-
-                const std::string padding = "                        ";
-                for (int i = 0; i < soldSummary.size(); ++i)
-                {
-                    buff3 = "";
-                    const std::string codeCol = soldSummary[i].code + padding;
-                    const std::string nameCol = soldSummary[i].name.substr(0, 9) + padding;
-                    const std::string stockCol = soldSummary[i].stock + padding;
-                    const std::string soldkCol = tostr(soldSummary[i].sold) + padding;
-
-                     buff3.append( codeCol.substr(0,8) + nameCol.substr(0,14) + stockCol.substr(0,10) + soldkCol.substr(0,10) + '\n');
-                       ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
-                        returncheck(ret);
-                }
-
-                buffx.append("     -------------------------------\n");
-
-                // buffx.append(std::string("    TOTAL          :Rs "));
-                // buffx.append(tostr(totalSold));
-
-
-                ret = printer::WriteText(buffx.c_str(), buffx.size(), 1);
-                returncheck(ret);
-
-                ret = printer::WriteText("\n\n\n", 3, 1);
-                returncheck(ret);
-                ret = prn_paper_feed(1);
-                prn_close();
-
-                if (ret == -3) {
-                  printf("out of the paper");
-                } else {
-                    return;
-                }
-
-            }
-
-
-
+    if (klok::pc::Product::GetAllFromDatabase(getDatabase(), allProducts,
+                                              5000) == 0) {
+      if (allProducts.size()) {
+        for (Iter_t it = allProducts.begin(); it != allProducts.end(); ++it) {
+          float totalSold = klok::pc::PosBillItem::GetTotalSold(getDatabase(),
+                                                                it->id.c_str());
+          if (totalSold != -1 && totalSold > 0) {
+            StockInfo entry;
+            entry.code = it->code;
+            entry.name = it->name;
+            entry.stock = it->stock_quantity;
+            entry.sold = totalSold;
+            soldSummary.push_back(entry);
+          }
         }
-        else
-        {
-            lcd::DisplayText(3,0,"Reading database failed",1);
-            lk_getkey();
+
+        if (!soldSummary.size()) {
+          lcd::DisplayText(3, 0, "No sales data", 1);
+          lk_getkey();
+          return;
         }
-    };
+
+        std::string buff, buff1, buff2, buff3, buffx;
+        prn_open();
+
+        if (prn_paperstatus() != 0) {
+          lk_dispclr();
+          lcd::DisplayText(3, 5, "No Paper !", 1);
+          lk_getkey();
+          return;
+        }
+
+        klok::pos::Configuration c;
+        klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
+
+        appendToIfFound(buff, c.getData(), "Company_Title_L1");
+        appendToIfFound(buff, c.getData(), "Company_Title_L2");
+        appendToIfFound(buff1, c.getData(), "Company_Addr_L1");
+        appendToIfFound(buff1, c.getData(), "Company_Addr_L2");
+        appendToIfFound(buff1, c.getData(), "Company_Addr_L3");
+        appendToIfFound(buff1, c.getData(), "Company_Contact_L1");
+        appendToIfFound(buff1, c.getData(), "Company_Contact_L2");
+        appendToIfFound(buff1, c.getData(), "Company_Email_L1");
+        // appendToIfFound(buff2,c.getData(),"Bill_name_1");
+        // appendToIfFound(buff2,c.getData(),"Bill_name_2");
+        // appendToIfFound(buff2,c.getData(),"Bill_name_3");
+        // appendToIfFound(buff2, c.getData(), "Report_name_1");
+        // appendToIfFound(buff2,c.getData(),"Report_name_2");
+        buff2.append("\n");
+        appendToIfFound(buff2, c.getData(), "Report_name_3");
+        // appendToIfFound(buff2,c.getData(),"Report_name_4");
+        // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
+        // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
+        // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
+        // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
+        buff3.append("\n");
+        buff3.append("   ---------------------------------\n");
+        buff3.append(" Code    Name      Stock      Sold \n");
+        buff3.append(" --------------------------------------\n");
+
+        lk_dispclr();
+        lcd::DisplayText(3, 5, "PRINTING BILL", 1);
+        // Print report here
+        int ret;
+
+        ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+        returncheck(ret);
+
+        ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+        returncheck(ret);
+
+        ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
+        returncheck(ret);
+
+        ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+        returncheck(ret);
+
+        const std::string padding = "                        ";
+        for (int i = 0; i < soldSummary.size(); ++i) {
+          const std::string codeCol = soldSummary[i].code + padding;
+          const std::string nameCol =
+              soldSummary[i].name.substr(0, 9) + padding;
+          const std::string stockCol = soldSummary[i].stock + padding;
+          const std::string soldkCol = tostr(soldSummary[i].sold) + padding;
+
+          buff3.assign(codeCol.substr(0, 6) + nameCol.substr(0, 14) +
+                       stockCol.substr(0, 10) + soldkCol.substr(0, 8) + '\n');
+          ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+          returncheck(ret);
+        }
+
+        buffx.append("     -------------------------------\n");
+
+        // buffx.append(std::string("    TOTAL          :Rs "));
+        // buffx.append(tostr(totalSold));
+
+        ret = printer::WriteText(buffx.c_str(), buffx.size(), 1);
+        returncheck(ret);
+
+        ret = printer::WriteText("\n\n\n", 3, 1);
+        returncheck(ret);
+        ret = prn_paper_feed(1);
+        prn_close();
+
+        if (ret == -3) {
+          printf("out of the paper");
+        } else {
+          return;
+        }
+      }
+
+    } else {
+      lcd::DisplayText(3, 0, "Reading database failed", 1);
+      lk_getkey();
+    }
+  };
 }
 
-void POS_Deleted_Bill_Report(){
+void POS_Deleted_Bill_Report() {
+  float dailyTotal = 0;
+  typedef std::vector<klok::pc::PosBillHeader>::iterator Iter_t;
+  std::vector<klok::pc::PosBillHeader> allBills;
+  if (klok::pc::PosBillHeader::GetAllFromDatabase(getDatabase(), allBills,
+                                                  5000) == 0) {
+    if (allBills.size()) {
+      // print bill id , date_time , net_amt , add / less , user id
 
-    float dailyTotal = 0;
-    typedef std::vector<klok::pc::PosBillHeader>::iterator Iter_t;
-    std::vector<klok::pc::PosBillHeader> allBills;
-    if (klok::pc::PosBillHeader::GetAllFromDatabase(getDatabase(), allBills,
-                                                    1000) == 0) {
-        if(allBills.size()){
+      std::string buff, buff1, buff2, buff3, buffx;
+      prn_open();
 
-                // print bill id , date_time , net_amt , add / less , user id
+      if (prn_paperstatus() != 0) {
+        lk_dispclr();
+        lcd::DisplayText(3, 5, "No Paper !", 1);
+        lk_getkey();
+        return;
+      }
 
-            std::string buff, buff1, buff2, buff3, buffx;
-            prn_open();
+      lk_dispclr();
+      lcd::DisplayText(3, 5, "PRINTING BILL", 1);
 
-            if (prn_paperstatus() != 0) {
-                lk_dispclr();
-                lcd::DisplayText(3, 5, "No Paper !", 1);
-                lk_getkey();
-                return;
-            }
+      klok::pos::Configuration c;
+      klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
 
-            lk_dispclr();
-            lcd::DisplayText(3, 5, "PRINTING BILL", 1);
+      appendToIfFound(buff, c.getData(), "Company_Title_L1");
+      appendToIfFound(buff, c.getData(), "Company_Title_L2");
+      appendToIfFound(buff1, c.getData(), "Company_Addr_L1");
+      appendToIfFound(buff1, c.getData(), "Company_Addr_L2");
+      appendToIfFound(buff1, c.getData(), "Company_Addr_L3");
+      appendToIfFound(buff1, c.getData(), "Company_Contact_L1");
+      appendToIfFound(buff1, c.getData(), "Company_Contact_L2");
+      appendToIfFound(buff1, c.getData(), "Company_Email_L1");
+      // appendToIfFound(buff2,c.getData(),"Bill_name_1");
+      // appendToIfFound(buff2,c.getData(),"Bill_name_2");
+      // appendToIfFound(buff2,c.getData(),"Bill_name_3");
+      // appendToIfFound(buff2, c.getData(), "Report_name_1");
+      // appendToIfFound(buff2,c.getData(),"Report_name_2");
+      // appendToIfFound(buff2,c.getData(),"Report_name_3");
+      buff2.append("\n");
+      appendToIfFound(buff2, c.getData(), "Report_name_4");
+      // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
+      // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
+      // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
+      // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
+      buff3.append("\n");
+      buff3.append(" -------------------------------------- \n");
+      buff3.append("BillNo   Date & Time          Amount \n");
+      buff3.append(" -------------------------------------- \n");
 
-            klok::pos::Configuration c;
-            klok::pos::Configuration::ParseFromFile("/mnt/jffs2/POS.cfg", c);
+      const std::string padding = "                                          ";
+      for (int i = 0; i < allBills.size(); ++i) {
+        if (allBills[i].is_deleted == "1") {
+          const std::string billIdCol = gDeviceId + allBills[i].id + padding;
+          const std::string dateTimeCol = allBills[i].date_time + padding;
+          const std::string netAmtCol = padding + allBills[i].net_amt;
+          buff3.append(billIdCol.substr(0, 7) + dateTimeCol.substr(0, 23) +
+                       netAmtCol.substr(netAmtCol.size() - 9) + '\n');
 
-            appendToIfFound(buff, c.getData(), "Company_Title_L1");
-            appendToIfFound(buff, c.getData(), "Company_Title_L2");
-            appendToIfFound(buff1, c.getData(), "Company_Addr_L1");
-            appendToIfFound(buff1, c.getData(), "Company_Addr_L2");
-            appendToIfFound(buff1, c.getData(), "Company_Addr_L3");
-            appendToIfFound(buff1, c.getData(), "Company_Contact_L1");
-            appendToIfFound(buff1, c.getData(), "Company_Contact_L2");
-            appendToIfFound(buff1, c.getData(), "Company_Email_L1");
-            // appendToIfFound(buff2,c.getData(),"Bill_name_1");
-            // appendToIfFound(buff2,c.getData(),"Bill_name_2");
-            // appendToIfFound(buff2,c.getData(),"Bill_name_3");
-            // appendToIfFound(buff2, c.getData(), "Report_name_1");
-            // appendToIfFound(buff2,c.getData(),"Report_name_2");
-            // appendToIfFound(buff2,c.getData(),"Report_name_3");
-            buff2.append("\n");
-            appendToIfFound(buff2,c.getData(),"Report_name_4");
-            // appendToIfFound(buff5,c.getData(),"Print_Footer_L1");
-            // appendToIfFound(buff5,c.getData(),"Print_Footer_L2");
-            // appendToIfFound(buff5,c.getData(),"Print_Footer_L3");
-            // appendToIfFound(buff5,c.getData(),"Print_Footer_L4");
-            buff3.append("\n");
-            buff3.append(" -------------------------------------- \n");
-            buff3.append("BillNo   Date & Time          Amount \n"); 
-            buff3.append(" -------------------------------------- \n"); 
-
-            const std::string padding = "                                          ";
-            for (int i = 0; i < allBills.size(); ++i)
-            {   if (allBills[i].is_deleted == "1"){
-                  const std::string billIdCol = gDeviceId + allBills[i].id + padding;
-                  const std::string dateTimeCol = allBills[i].date_time + padding;
-                  const std::string netAmtCol = padding + allBills[i].net_amt;
-                  buff3.append(billIdCol.substr(0,7) + dateTimeCol.substr(0,23) + netAmtCol.substr(netAmtCol.size() - 9) + '\n');
-
-                    // printf(" Bill id :%s", allBills[i].id.c_str());
-                    // printf(" billDate :%s", allBills[i].date_time.c_str());
-                    // printf(" billAmt :%s", allBills[i].gross_amt.c_str());
-                    // printf(" billAmt :%s", allBills[i].add_less.c_str());
-                    // printf(" billAmt :%s", allBills[i].net_amt.c_str());
-                    // printf(" billAmt :%s\n", allBills[i].user_id.c_str());
-
-                }
-            }
-
-            buffx.append(" --------------------------------------\n");
-
-            // buffx.append(std::string("    TOTAL          :Rs "));
-            // buffx.append(tostr(totalSold));
-            int ret;
-
-            ret = printer::WriteText(buff.c_str(), buff.size(), 2);
-            returncheck(ret);
-
-            ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
-            returncheck(ret);
-
-            ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
-            returncheck(ret);
-
-            ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
-            returncheck(ret);
-
-            ret = printer::WriteText(buffx.c_str(), buffx.size(), 1);
-            returncheck(ret);
-
-            ret = printer::WriteText("\n\n\n", 3, 1);
-            returncheck(ret);
-            ret = prn_paper_feed(1);
-            prn_close();
-
-            if (ret == -3) {
-              printf("out of the paper");
-            } else {
-                return;
-            }
-
+          // printf(" Bill id :%s", allBills[i].id.c_str());
+          // printf(" billDate :%s", allBills[i].date_time.c_str());
+          // printf(" billAmt :%s", allBills[i].gross_amt.c_str());
+          // printf(" billAmt :%s", allBills[i].add_less.c_str());
+          // printf(" billAmt :%s", allBills[i].net_amt.c_str());
+          // printf(" billAmt :%s\n", allBills[i].user_id.c_str());
         }
-        else
+      }
 
-        {
-            lk_dispclr();
-            lcd::DisplayText(2,0,"No Sales",1);
-            lk_getkey();
-            return;
-        }
+      buffx.append(" --------------------------------------\n");
+
+      // buffx.append(std::string("    TOTAL          :Rs "));
+      // buffx.append(tostr(totalSold));
+      int ret;
+
+      ret = printer::WriteText(buff.c_str(), buff.size(), 2);
+      returncheck(ret);
+
+      ret = printer::WriteText(buff1.c_str(), buff1.size(), 1);
+      returncheck(ret);
+
+      ret = printer::WriteText(buff2.c_str(), buff2.size(), 2);
+      returncheck(ret);
+
+      ret = printer::WriteText(buff3.c_str(), buff3.size(), 1);
+      returncheck(ret);
+
+      ret = printer::WriteText(buffx.c_str(), buffx.size(), 1);
+      returncheck(ret);
+
+      ret = printer::WriteText("\n\n\n", 3, 1);
+      returncheck(ret);
+      ret = prn_paper_feed(1);
+      prn_close();
+
+      if (ret == -3) {
+        printf("out of the paper");
+      } else {
+        return;
+      }
+
+    } else
+
+    {
+      lk_dispclr();
+      lcd::DisplayText(2, 0, "No Sales", 1);
+      lk_getkey();
+      return;
     }
-
+  }
 }
 
 void Reports() {
@@ -2355,18 +2338,48 @@ void Reports() {
             case 5:
               ConsolidatedReport();
               break;
-          case 6:
+            case 6:
               CustomerWiseReport();
               break;
-          case 7:
+            case 7:
               DailyCollectionReport();
               break;
-
           }
           break;
       }
     }
   }
+}
+
+bool mountUSB(){
+    int ret = 0;
+  FILE* fp;
+
+  fp = fopen("/etc/mtab", "r");
+  char str[100] = "", flag = 0;
+
+  if (fp == NULL)
+    fprintf(stderr, "File open Error\n");
+
+  while ((fgets(str, 80, fp)) != NULL) {
+    if ((strstr(str, "/mnt/usb")) != NULL)
+      flag = 1;
+  }
+
+  fclose(fp);
+
+  if(flag == 1) return true;
+
+
+    ret = system("mount -t vfat /dev/sda1 /mnt/usb");
+    if (ret == 256)
+      ret = system("mount -t vfat /dev/sdb1 /mnt/usb");
+    if (ret == 256)
+      ret = system("mount -t vfat /dev/sdc1 /mnt/usb");
+    if (ret == 256)
+      ret = system("mount -t vfat /dev/sdd1 /mnt/usb");
+
+    return ret == 0;
 }
 
 void Export() {
@@ -2453,7 +2466,6 @@ void Export() {
       lcd::DisplayText(5, 0, "This may take 5-8 seconds", 0);
       ret = system("cp /mnt/jffs2/PayCollect.db /mnt/usb/");
 
-
       if (ret == 0) {
         lk_dispclr();
         lcd::DisplayText(3, 2, "Copying Successfull", 0);
@@ -2524,7 +2536,6 @@ void Import() {
     lcd::DisplayText(3, 2, "Copying ....", 0);
     lcd::DisplayText(5, 0, "This may take 5-8 seconds", 0);
     ret = system("cp /mnt/usb/PayCollect.db /mnt/jffs2/");
-
 
     if (ret == 0) {
       lk_dispclr();
@@ -2640,7 +2651,8 @@ void ClearBill() {
 void DeleteBill() {
   std::vector<klok::pc::PosBillHeader> allBills;
   if (klok::pc::PosBillHeader::GetAllNonDeleted(getDatabase(), allBills,
-                                                1000) == 0 && allBills.size()) {
+                                                2000) == 0 &&
+      allBills.size()) {
     klok::pc::MenuResult res;
     res.wasCancelled = false;
     res.selectedIndex = -1;
@@ -2653,9 +2665,6 @@ void DeleteBill() {
       lcd::DisplayText(4, 0, "Press F2 to Delete / Press Enter to return", 0);
 
       int x = lk_getkey();
-
-
-
 
       if (x == klok::pc::KEYS::KEY_F2) {
         if (klok::pc::PosBillHeader::MarkBillAsDeleted(
@@ -2680,6 +2689,7 @@ void DeleteBill() {
 void UploadConfig() {
   lk_dispclr();
   lcd::DisplayText(2, 0, "Insert the usb device and press ENTER", 0);
+  int x = lk_getkey();
   printf("Import Activity\n");
 
   int ret = 0;
@@ -2698,7 +2708,6 @@ void UploadConfig() {
 
   fclose(fp);
 
-  int x = lk_getkey();
 
   if (x == klok::pc::KEYS::KEY_ENTER && flag == 1) {
     lk_dispclr();
@@ -2799,6 +2808,463 @@ void UploadConfig() {
   }
 }
 
+bool WriteSalesToCSV(const char* name,
+                     SQLite::Database& db,
+                     std::string& error,
+                     std::vector<klok::pc::PosBillHeader>& allBills) {
+  /* format
+
+BillNo,GrossAmount,CashDiscount,NetAmount,DateTime,UserId,DeviceId,Code,SalesRate,Quantity,ItemTotal,BillNumber
+  */
+
+  try {
+    std::ofstream outFile(name);
+
+    if (!outFile) {
+      error = "Cannot open";
+      return false;
+    }
+
+    outFile << "BillNo,GrossAmount,CashDiscount,NetAmount,DateTime,UserId,"
+               "DeviceId,Code,SalesRate,Quantity,ItemTotal,BillNumber\n";
+    for (size_t i = 0; i < allBills.size(); ++i) {
+      std::vector<klok::pc::PosBillItem> items;
+
+      if (klok::pc::PosBillItem::GetAllForBillId(
+              getDatabase(), allBills[i].id.c_str(), items, 2000) != 0) {
+        error = "Reading bill detail fail";
+        return false;
+      }
+
+      if (!items.size()) {
+        error = "no items for bill : " + gDeviceId + allBills[i].id;
+        return false;
+      }
+
+      for (size_t itemIndex = 0; itemIndex < items.size(); ++itemIndex) {
+        float qty = 0;
+        float sr = 0;
+        {
+          std::istringstream istr(items[itemIndex].quantity);
+          istr >> qty;
+        }
+        {
+          std::istringstream istr(items[itemIndex].sales_rate);
+          istr >> sr;
+        }
+        std::stringstream ss;
+        ss << (gDeviceId + allBills[i].id) << ',' << allBills[i].gross_amt
+           << ',' << allBills[i].add_less << ',' << allBills[i].net_amt << ','
+           << allBills[i].date_time << ',' << allBills[i].user_id << ','
+           << allBills[i].device_id << ',' << items[itemIndex].product_id << ','
+           << items[itemIndex].sales_rate << ',' << items[itemIndex].quantity
+           << ',' << (qty * sr) << ',' << (gDeviceId + allBills[i].id) << '\n';
+
+        // std::cout << "Appending : "  << ss.str();
+        outFile << ss.str();
+      }
+    }
+
+    outFile.close();
+
+  } catch (std::exception& e) {
+    error = e.what();
+    return false;
+  }
+  return true;
+}
+
+void ExportSalesToUSB() {
+  lk_dispclr();
+  lcd::DisplayText(1, 0, "Export Sales -> USB", 0);
+  lcd::DisplayText(2, 0, "F2 to Start", 0);
+  lcd::DisplayText(3, 0, "Any other to Abort", 0);
+  int key_pressed = lk_getkey();
+
+  if (klok::pc::KEYS::KEY_F2 != key_pressed)
+    return;
+
+  system("rm -f /mnt/jffs2/sales.csv");
+
+  std::vector<klok::pc::PosBillHeader> allBills;
+  if (klok::pc::PosBillHeader::GetAllNonDeleted(getDatabase(), allBills,
+                                                2000) == 0) {
+    std::string err;
+    if (!WriteSalesToCSV("/mnt/jffs2/sales.csv", getDatabase(), err,
+                         allBills)) {
+      lk_dispclr();
+      lcd::DisplayText(2, 0, "Writing File Failed", 0);
+      lcd::DisplayText(4, 0, err.c_str(), 0);
+      lk_getkey();
+      return;
+    }
+
+    while (true) {
+      int psRet =
+          system("/home/devkermit -s /mnt/jffs2/sales.csv -a sales.csv");
+
+      lk_dispclr();
+      if (psRet != 0) {
+        lcd::DisplayText(1, 0, "Download failed!", 0);
+        lcd::DisplayText(2, 0, ("Status : " + tostr(psRet)).c_str(), 0);
+        lcd::DisplayText(4, 0, "Enter - Retry,Other - Abort", 0);
+        key_pressed = lk_getkey();
+
+        if (klok::pc::KEYS::KEY_ENTER == key_pressed) {
+          continue;
+        } else
+          return;
+      } else {
+        lcd::DisplayText(1, 0, "Download Success!", 0);
+        lcd::DisplayText(4, 0, "Any Key - OK", 0);
+        key_pressed = lk_getkey();
+        return;
+      }
+    }
+  } else {
+    lk_dispclr();
+    lcd::DisplayText(4, 0, "Getting bills failed", 0);
+    lk_getkey();
+    return;
+  }
+}
+
+void ExportSalesToDrive() {
+  lk_dispclr();
+  lcd::DisplayText(1, 0, "Export Sales -> Drive", 0);
+  lcd::DisplayText(2, 0, "Enter to Start", 0);
+  lcd::DisplayText(3, 0, "Cancel to Abort", 0);
+  int key_pressed = lk_getkey();
+
+  if(!mountUSB())
+  {
+    lk_dispclr();
+    lcd::DisplayText(1, 0, "Cannot Mount USB", 0);
+    lcd::DisplayText(3, 0, "Any Key - Abort", 0);
+    lk_getkey();
+    return;
+  }
+
+
+  system("rm -f /mnt/usb/sales.csv");
+
+  std::vector<klok::pc::PosBillHeader> allBills;
+  if (klok::pc::PosBillHeader::GetAllNonDeleted(getDatabase(), allBills,
+                                                2000) == 0) {
+    std::string err;
+    if (!WriteSalesToCSV("/mnt/usb/sales.csv", getDatabase(), err,
+                         allBills)) {
+      system("umount /mnt/usb");
+      lk_dispclr();
+      lcd::DisplayText(2, 0, "Writing File Failed", 0);
+      lcd::DisplayText(4, 0, err.c_str(), 0);
+      lk_getkey();
+      return;
+    }
+
+  } else {
+    system("umount /mnt/usb");
+    lk_dispclr();
+    lcd::DisplayText(4, 0, "Getting bills failed", 0);
+    lk_getkey();
+    return;
+  }
+  
+
+
+lk_dispclr();
+lcd::DisplayText(1, 0, "Upload Success!", 0);
+lcd::DisplayText(4, 0, "Any Key - OK", 0);
+key_pressed = lk_getkey();
+
+
+}
+
+void ImportStockFromUSB() {
+  while (1) {
+    lk_dispclr();
+    lcd::DisplayText(1, 0, "Import Stock <- USB", 0);
+    lcd::DisplayText(2, 0, "F2 to Start", 0);
+    lcd::DisplayText(3, 0, "Any key to Abort", 0);
+    int key_pressed = lk_getkey();
+    if (klok::pc::KEYS::KEY_F2 != key_pressed) {
+      return;
+    }
+    lcd::DisplayText(4, 0, "Waiting...", 0);
+    system("rm -f /mnt/jffs2/stock.csv");
+    int psRet = system("/home/devkermit -r -a /mnt/jffs2/stock.csv");
+
+    lk_dispclr();
+    if (psRet != 0) {
+      lcd::DisplayText(1, 0, "Upload failed!", 0);
+      lcd::DisplayText(2, 0, ("Status : " + tostr(psRet)).c_str(), 0);
+      lcd::DisplayText(4, 0, "Enter - Retry,Other - Abort", 0);
+      key_pressed = lk_getkey();
+
+      if (klok::pc::KEYS::KEY_ENTER == key_pressed) {
+        continue;
+      } else
+        return;
+    } else {
+
+      {
+        std::vector<klok::data::ProductStock> outStock;
+        std::string outError = "";
+        const int ret = klok::data::ProductStock::fromFile("/mnt/jffs2/stock.csv",outError,outStock);
+
+        if(0 != ret)
+        {
+          lk_dispclr();
+          lcd::DisplayText(1, 0, "File Import failed!", 0);
+          lcd::DisplayText(2, 0, ("Status : " + outError).c_str(), 0);
+          lcd::DisplayText(4, 0, "Any Key - Abort", 0);
+          lk_getkey();
+          return;
+        }
+
+        klok::pc::PosBillItem::DeleteAllFromTable(getDatabase());
+        klok::pc::PosBillHeader::DeleteAllFromTable(getDatabase());
+        klok::pc::Product::DeleteAllFromDatabase(getDatabase());
+
+        for (size_t i = 0; i < outStock.size(); ++i)
+        {
+          klok::pc::Product toInsert;
+          toInsert.name = outStock[i].Name;
+          toInsert.short_name = outStock[i].ShortName;
+          toInsert.code = outStock[i].Code;
+          toInsert.sales_rate = outStock[i].SalesRate;
+          toInsert.stock_quantity = outStock[i].StockQuantity;
+
+          if(0  != klok::pc::Product::InsertNew(getDatabase(),toInsert)){
+            lk_dispclr();
+            lcd::DisplayText(1, 0, ("inserting : " + outStock[i].Code ).c_str(), 0);
+            lcd::DisplayText(2, 0, "failed", 0);
+            lcd::DisplayText(4, 0, "Any Key - Abort", 0);
+            lk_getkey();
+            return;
+          }
+
+        }
+        
+      }
+
+      lcd::DisplayText(1, 0, "Upload Success!", 0);
+      lcd::DisplayText(4, 0, "Any Key - OK", 0);
+      key_pressed = lk_getkey();
+      return;
+    }
+  }
+}
+
+void ImportStockFromDrive() {
+  lk_dispclr();
+  lcd::DisplayText(1, 0, "Import stock <- Drive", 0);
+  lcd::DisplayText(2, 0, "Enter to Start", 0);
+  lcd::DisplayText(3, 0, "Cancel to Abort", 0);
+  int key_pressed = lk_getkey();
+
+  if(!mountUSB())
+  {
+    lk_dispclr();
+    lcd::DisplayText(1, 0, "Cannot Mount USB", 0);
+    lcd::DisplayText(3, 0, "Any Key - Abort", 0);
+    lk_getkey();
+    return;
+  }
+
+  {
+  std::vector<klok::data::ProductStock> outStock;
+  std::string outError = "";
+  const int ret = klok::data::ProductStock::fromFile("/mnt/usb/stock.csv",outError,outStock);
+
+  if(0 != ret)
+  {
+    system("umount /mnt/usb");
+
+    lk_dispclr();
+    lcd::DisplayText(1, 0, "File Import failed!", 0);
+    lcd::DisplayText(2, 0, ("Status : " + outError).c_str(), 0);
+    lcd::DisplayText(4, 0, "Any Key - Abort", 0);
+    lk_getkey();
+    return;
+  }
+
+  klok::pc::PosBillItem::DeleteAllFromTable(getDatabase());
+  klok::pc::PosBillHeader::DeleteAllFromTable(getDatabase());
+  klok::pc::Product::DeleteAllFromDatabase(getDatabase());
+
+  for (size_t i = 0; i < outStock.size(); ++i)
+  {
+    klok::pc::Product toInsert;
+    toInsert.name = outStock[i].Name;
+    toInsert.short_name = outStock[i].ShortName;
+    toInsert.code = outStock[i].Code;
+    toInsert.sales_rate = outStock[i].SalesRate;
+    toInsert.stock_quantity = outStock[i].StockQuantity;
+
+    if(0  != klok::pc::Product::InsertNew(getDatabase(),toInsert)){
+    system("umount /mnt/usb");
+    
+      lk_dispclr();
+      lcd::DisplayText(1, 0, ("inserting : " + outStock[i].Code ).c_str(), 0);
+      lcd::DisplayText(2, 0, "failed", 0);
+      lcd::DisplayText(4, 0, "Any Key - Abort", 0);
+      lk_getkey();
+      return;
+    }
+
+  }
+
+  system("umount /mnt/usb");
+  lk_dispclr();
+  lcd::DisplayText(1, 0, "Import Complete", 0);
+  lcd::DisplayText(4, 0, "Any Key - OK", 0);
+  lk_getkey();
+
+}
+
+}
+
+void ImportUsersFromUSB() {
+  while (1) {
+    lk_dispclr();
+    lcd::DisplayText(1, 0, "Import Users <- USB", 0);
+    lcd::DisplayText(2, 0, "F2 to Start", 0);
+    lcd::DisplayText(3, 0, "Cancel to Abort", 0);
+    int key_pressed = lk_getkey();
+    if (klok::pc::KEYS::KEY_F2 != key_pressed) {
+      return;
+    }
+    lcd::DisplayText(4, 0, "Waiting...", 0);
+    system("rm -f /mnt/jffs2/users.csv");
+    int psRet = system("/home/devkermit -r -a /mnt/jffs2/users.csv");
+
+    lk_dispclr();
+    if (psRet != 0) {
+      lcd::DisplayText(1, 0, "Upload failed!", 0);
+      lcd::DisplayText(2, 0, ("Status : " + tostr(psRet)).c_str(), 0);
+      lcd::DisplayText(4, 0, "Enter - Retry,Other - Abort", 0);
+      key_pressed = lk_getkey();
+
+      if (klok::pc::KEYS::KEY_ENTER == key_pressed) {
+        continue;
+      } else
+        return;
+    } else {
+
+      {
+
+          std::string outError = "";
+          std::vector<klok::data::UserData> outUsers;
+          const int retUser = klok::data::UserData::fromFile("/mnt/jffs2/users.csv",outError,outUsers);
+
+          if(0 != retUser)
+          {
+            lcd::DisplayText(1, 0, "Invalid File!", 0);
+            lcd::DisplayText(2, 0, outError.c_str(), 0);
+            lcd::DisplayText(4, 0, "Any Key - Abort", 0);
+            lk_getkey();
+            return;
+          }
+
+
+          klok::pc::User::DeleteAllFromDatabase(getDatabase());
+
+
+          for (size_t i = 0; i < outUsers.size(); ++i)
+          {
+            klok::pc::User usr;
+            usr.id = outUsers[i].Code;
+            usr.name = outUsers[i].Name;
+            usr.password = outUsers[i].Password;
+            if(0 != klok::pc::User::InsertNew(getDatabase(),usr)){
+              lk_dispclr();
+              lcd::DisplayText(1, 0, ("inserting : " + outUsers[i].Code ).c_str(), 0);
+              lcd::DisplayText(2, 0, "failed", 0);
+              lcd::DisplayText(4, 0, "Any Key - Abort", 0);
+              lk_getkey();
+              return;
+            }
+          }
+
+      }
+
+      lcd::DisplayText(1, 0, "Upload Success!", 0);
+      lcd::DisplayText(3, 0, "Any Key - Reboot", 0);
+      key_pressed = lk_getkey();
+      closeDatabase();
+      system("/sbin/shutdown -r now");
+      return;
+    }
+  }
+}
+
+void ImportUsersFromDrive() {
+  lk_dispclr();
+  lcd::DisplayText(1, 0, "Import Users <- Drive", 0);
+  lcd::DisplayText(2, 0, "Enter to Start", 0);
+  lcd::DisplayText(3, 0, "Cancel to Abort", 0);
+  int key_pressed = lk_getkey();
+  if(!mountUSB())
+  {
+    lk_dispclr();
+    lcd::DisplayText(1, 0, "Cannot Mount USB", 0);
+    lcd::DisplayText(3, 0, "Any Key - Abort", 0);
+    lk_getkey();
+    return;
+  }
+
+        {
+
+          std::string outError = "";
+          std::vector<klok::data::UserData> outUsers;
+          const int retUser = klok::data::UserData::fromFile("/mnt/usb/users.csv",outError,outUsers);
+
+          if(0 != retUser)
+          {
+    system("umount /mnt/usb");
+
+            lcd::DisplayText(1, 0, "Invalid File!", 0);
+            lcd::DisplayText(2, 0, outError.c_str(), 0);
+            lcd::DisplayText(4, 0, "Any Key - Abort", 0);
+            lk_getkey();
+            return;
+          }
+
+
+          klok::pc::User::DeleteAllFromDatabase(getDatabase());
+
+
+          for (size_t i = 0; i < outUsers.size(); ++i)
+          {
+            klok::pc::User usr;
+            usr.id = outUsers[i].Code;
+            usr.name = outUsers[i].Name;
+            usr.password = outUsers[i].Password;
+            if(0 != klok::pc::User::InsertNew(getDatabase(),usr)){
+              lk_dispclr();
+    system("umount /mnt/usb");
+            
+              lcd::DisplayText(1, 0, ("inserting : " + outUsers[i].Code ).c_str(), 0);
+              lcd::DisplayText(2, 0, "failed", 0);
+              lcd::DisplayText(4, 0, "Any Key - Abort", 0);
+              lk_getkey();
+              return;
+            }
+          }
+
+      }
+
+      lcd::DisplayText(1, 0, "Upload Success!", 0);
+      lcd::DisplayText(3, 0, "Any Key - Reboot", 0);
+      key_pressed = lk_getkey();
+    system("umount /mnt/usb");
+
+      closeDatabase();
+      system("/sbin/shutdown -r now");
+      return;
+}
+
 void AdminArea() {
   MENU_T menu;
   int opt = 0;
@@ -2808,13 +3274,25 @@ void AdminArea() {
   while (1) {
     lk_dispclr();
 
+    strcpy(menu.title,"");
     menu.start = 0;
-    menu.maxEntries = 5;
-    strcpy(menu.menu[0], "Export");
-    strcpy(menu.menu[1], "Import");
-    strcpy(menu.menu[2], "Upload Configuration");
-    strcpy(menu.menu[3], "Clear Bill");
+    menu.maxEntries = 11;
+    strcpy(menu.menu[0], "Export DB -> USB");
+    strcpy(menu.menu[1], "Import DB <- USB");
+
+    strcpy(menu.menu[2], "Print Config <- USB");
+
+    strcpy(menu.menu[3], "Clear All Bills");
     strcpy(menu.menu[4], "Delete Bill");
+
+    strcpy(menu.menu[5], "Export Sales -> PC");
+    strcpy(menu.menu[6], "Export Sales -> USB");
+
+    strcpy(menu.menu[7], "Import Stock <- PC");
+    strcpy(menu.menu[8], "Import Stock <- USB");
+
+    strcpy(menu.menu[9], "Import Users <- PC");
+    strcpy(menu.menu[10], "Import Users <- USB");
     // strcpy(menu.menu[4],"Logout");
     while (1) {
       lk_dispclr();
@@ -2848,6 +3326,27 @@ void AdminArea() {
               DeleteBill();
               break;
 
+            case 6:
+              ExportSalesToUSB();
+              break;
+
+            case 7:
+              ExportSalesToDrive();
+              break;
+            case 8:
+              ImportStockFromUSB();
+              break;
+            case 9:
+              ImportStockFromDrive();
+              break;
+            case 10:
+              ImportUsersFromUSB();
+              break;
+            case 11:
+              ImportUsersFromDrive();
+              break;
+            default:
+              break;
               // case 5:
               // Login();
               // break;
@@ -2857,9 +3356,9 @@ void AdminArea() {
     }
   }
 }
-
+static const char* const gAdminUserId = "101010";
 void Settings() {
-  if (gUserId == "101010") {
+  if (gUserId == gAdminUserId) {
     AdminArea();
 
   } else {
@@ -2872,7 +3371,17 @@ void Settings() {
     if (res > 0) {
       pwd[res] = '\0';
 
-      if (pwd == tostr(123456)) {
+      klok::pc::User userObj;
+      if (klok::pc::User::FromDatabase(getDatabase(), gAdminUserId, userObj) !=
+          0) {
+        printf("No admin found %s\n", gAdminUserId);
+        lk_dispclr();
+        lcd::DisplayText(2, 2, "No Such user ", 1);
+        lk_getkey();
+        return;
+      }
+
+      if (pwd == userObj.password) {
         AdminArea();
       } else {
         lk_dispclr();
@@ -2948,7 +3457,7 @@ void Login() {
       if (klok::pc::User::FromDatabase(getDatabase(), user, userObj) != 0) {
         printf("No Such User %s\n", user);
         lk_dispclr();
-        lcd::DisplayText(2,2, "No Such user ", 1);
+        lcd::DisplayText(2, 2, "No Such user ", 1);
         lk_getkey();
         continue;
       }
@@ -2964,7 +3473,7 @@ void Login() {
 
           if (res > 0) {
             pwd[res] = '\0';
-            printf("Password is %s %d\n", pwd, res);
+            // printf("Password is %s %d\n", pwd, res);
 
             if (userObj.password == pwd) {
               gUserId = user;

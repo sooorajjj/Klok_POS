@@ -33,6 +33,11 @@ namespace klok
             static int32_t GetNextTransactionIDForUser(SQLite::Database& db, const char* id, std::string& outID);
             static int32_t GetAllFromDatabase(SQLite::Database& db, std::vector<User>& outUsers, uint32_t maxToRead);
 
+
+            static int32_t DeleteAllFromDatabase(SQLite::Database& db);
+            static int32_t InsertNew(SQLite::Database& db,const User & newEntry);
+
+
             struct Queries
             {
                 static const char* TABLE_NAME;
@@ -41,6 +46,9 @@ namespace klok
                 static const char* DROP_USER_TABLE_QUERY;
                 static const char* SELECT_USER_WITH_ID_FROM_TABLE;
                 static const char* GET_NEXT_TRANS_ID_FOR_USER;
+                static const char* DELETE_ALL_FROM_TABLE;
+                static const char* RESET_PRIMARY_KEY;
+                static const char* INSERT_INTO_TABLE;
             };
         };
 
@@ -117,6 +125,9 @@ namespace klok
             static int32_t FromDatabase(SQLite::Database& db, const char* id, Product& outProduct);
             static int32_t CreateTable(SQLite::Database& db, bool dropIfExist);
             static int32_t FromDatabaseWithCode(SQLite::Database& db, const char* code, Product& outProduct);
+
+            static int32_t DeleteAllFromDatabase(SQLite::Database& db);
+            static int32_t InsertNew(SQLite::Database& db,const Product & newEntry);
             struct Queries
             {
                 static const char* TABLE_NAME;
@@ -126,6 +137,9 @@ namespace klok
                 static const char* SELECT_PRODUCT_WITH_ID_FROM_TABLE;
                 static const char* SELECT_PRODUCT_WITH_CODE_FROM_TABLE;
                 static const char* SEARCH_PRODUCTS_BY_NAME_FROM_TABLE;
+                static const char* DELETE_ALL_PRODUCTS_FROM_DATABASE;
+                static const char* RESET_PRIMARY_KEY;
+                static const char* INSERT_INTO_TABLE;
 
             };
         };
@@ -182,11 +196,12 @@ namespace klok
         {
         public:
 
-            std::string bill_id, product_id, quantity, net_amt;
+            std::string bill_id, product_id, quantity, sales_rate;
 
             static int32_t FromDatabase(SQLite::Database& db, const char* id, PosBillItem& outPosBillItem);
             static int32_t CreateTable(SQLite::Database& db, bool dropIfExist);
             static int32_t GetAllFromDatabase(SQLite::Database& db, std::vector<PosBillItem>& outPosBillItem, uint32_t maxToRead);
+            static int32_t GetAllForBillId(SQLite::Database& db, const char * BillId , std::vector<PosBillItem>& outPosBillItems, uint32_t maxToRead);
             static int32_t InsertIntoTable(SQLite::Database& db, const PosBillItem& toInsert);
             static int32_t DeleteAllFromTable(SQLite::Database& db);
 
@@ -202,6 +217,8 @@ namespace klok
                 static const char* DELETE_ALL_FROM_TABLE;
                 static const char* RESET_PRIMARY_KEY;
                 static const char* GET_TOTAL_SOLD_PER_ITEM;
+                static const char* GET_ALL_FOR_BILL_ID;
+
             };
         };
 

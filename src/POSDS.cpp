@@ -127,6 +127,45 @@ namespace klok
             return 0;
         }
 
+        int32_t User::DeleteAllFromDatabase(SQLite::Database& db){
+            try
+            {
+                SQLite::Statement query(db, User::Queries::DELETE_ALL_FROM_TABLE);
+                SQLite::Statement query1(db, User::Queries::RESET_PRIMARY_KEY);
+                query.executeStep();
+                query1.executeStep();
+            }
+            catch(std::exception& e)
+            {
+                std::printf("User::DeleteAllFromDatabase -> Fatal Error %s\n%s\n", User::Queries::DELETE_ALL_FROM_TABLE, e.what());
+                return -1;
+            }
+            return 0;
+
+        }
+
+        int32_t User::InsertNew(SQLite::Database& db,const User & newEntry){
+            try
+            {
+                SQLite::Statement query(db, User::Queries::INSERT_INTO_TABLE);
+                query.bind(1, newEntry.id);
+                query.bind(2, newEntry.name);
+                query.bind(3, newEntry.password);
+
+                query.bind(4, "default");
+                query.bind(5, "default");
+                query.bind(6, "default");
+                query.executeStep();
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("User::InsertNew -> Fatal Error %s\n", e.what());
+            }
+           return -1;
+        }
+
+
         int32_t Customer::GetAllFromDatabase(SQLite::Database& db,std::vector<Customer>& outCustomers, uint32_t maxToRead)
         {
             try
@@ -738,6 +777,44 @@ namespace klok
            return -1;
         }
 
+
+        int32_t Product::DeleteAllFromDatabase(SQLite::Database& db){
+            try
+            {
+                SQLite::Statement query(db, Product::Queries::DELETE_ALL_PRODUCTS_FROM_DATABASE);
+                SQLite::Statement query1(db, Product::Queries::RESET_PRIMARY_KEY);
+                query.executeStep();
+                query1.executeStep();
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Product::DeleteAllFromDatabase -> Fatal Error %s\n%s\n", Product::Queries::DELETE_ALL_PRODUCTS_FROM_DATABASE, e.what());
+                return -1;
+            }
+            return 0;
+        }
+
+        int32_t Product::InsertNew(SQLite::Database& db,const Product & newEntry){
+            try
+            {
+                //INSERT INTO pos_product (Name,ShortName,Code,SalesRate,StockQuantity) VALUES(?,?,?,?,?)
+                SQLite::Statement query(db, Product::Queries::INSERT_INTO_TABLE);
+                query.bind(1, newEntry.name);
+                query.bind(2, newEntry.short_name);
+                query.bind(3, newEntry.code);
+                query.bind(4, newEntry.sales_rate);
+                query.bind(5, newEntry.stock_quantity);
+                query.executeStep();
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("Product::InsertNew -> Fatal Error %s\n", e.what());
+            }
+           return -1;
+        }
+        
+
         int32_t PosBillHeader::GetAllFromDatabase(SQLite::Database& db, std::vector<PosBillHeader>& outPosBillHeaders, uint32_t maxToRead)
         {
             try
@@ -1061,10 +1138,10 @@ namespace klok
                 while(query.executeStep() && (maxToRead--))
                 {
                     PosBillItem outPosBillItem;
-                    outPosBillItem.bill_id = query.getColumn(1).getString();
-                    outPosBillItem.product_id = query.getColumn(2).getString();
-                    outPosBillItem.quantity = query.getColumn(3).getString();
-                    outPosBillItem.net_amt = query.getColumn(4).getString();
+                    outPosBillItem.bill_id = query.getColumn(0).getString();
+                    outPosBillItem.product_id = query.getColumn(1).getString();
+                    outPosBillItem.quantity = query.getColumn(2).getString();
+                    outPosBillItem.sales_rate = query.getColumn(3).getString();
                     outPosBillItems.push_back(outPosBillItem);
                 }
 
@@ -1118,10 +1195,10 @@ namespace klok
 
                 if(query.executeStep())
                 {
-                    outPosBillItem.bill_id = query.getColumn(1).getString();
-                    outPosBillItem.product_id = query.getColumn(2).getString();
-                    outPosBillItem.quantity = query.getColumn(3).getString();
-                    outPosBillItem.net_amt = query.getColumn(4).getString();
+                    outPosBillItem.bill_id = query.getColumn(0).getString();
+                    outPosBillItem.product_id = query.getColumn(1).getString();
+                    outPosBillItem.quantity = query.getColumn(2).getString();
+                    outPosBillItem.sales_rate = query.getColumn(3).getString();
                     return 0;
                 }
             }
@@ -1140,7 +1217,7 @@ namespace klok
                 query.bind(1, toInsert.bill_id);
                 query.bind(2, toInsert.product_id);
                 query.bind(3, toInsert.quantity);
-                query.bind(4, toInsert.net_amt);
+                query.bind(4, toInsert.sales_rate);
 
                 query.executeStep();
 
@@ -1204,6 +1281,33 @@ namespace klok
         }
         // User Queries
 
+
+        int32_t PosBillItem::GetAllForBillId(SQLite::Database& db, const char * BillId , std::vector<PosBillItem>& outPosBillItems, uint32_t maxToRead){
+            try
+            {
+                SQLite::Statement query(db, PosBillItem::Queries::GET_ALL_FOR_BILL_ID);
+                query.bind(1,BillId);
+
+                while(query.executeStep() && (maxToRead--))
+                {
+                    PosBillItem outPosBillItem;
+                    outPosBillItem.bill_id = query.getColumn(0).getString();
+                    outPosBillItem.product_id = query.getColumn(1).getString();
+                    outPosBillItem.quantity = query.getColumn(2).getString();
+                    outPosBillItem.sales_rate = query.getColumn(3).getString();
+                    outPosBillItems.push_back(outPosBillItem);
+                }
+
+                return 0;
+            }
+            catch(std::exception& e)
+            {
+                std::printf("PosBillItem::GetAllForBillId -> Fatal Error query :%s\n %s\n", PosBillItem::Queries::GET_ALL_FOR_BILL_ID, e.what());
+                return -1;
+            }
+
+            return 0;
+        }
         const char * User::Queries::GET_NEXT_TRANS_ID_FOR_USER = "select MAX(Trans_No)+1 as Next_ID from pay_coll_trans where User_ID=?";
         const char * User::Queries::TABLE_NAME = "pay_coll_user";
         const char * User::Queries::GET_ALL_QUERY = "SELECT * FROM pay_coll_user";
@@ -1218,6 +1322,11 @@ namespace klok
             "Comp_Address   VARCHAR(100) NOT NULL);";
 
         const char * User::Queries::DROP_USER_TABLE_QUERY = "DROP TABLE pay_coll_user IF EXISTS;";
+
+
+        const char* User::Queries::DELETE_ALL_FROM_TABLE = "delete from pay_coll_user;";
+        const char* User::Queries::RESET_PRIMARY_KEY = "delete from sqlite_sequence where name='pay_coll_user';";
+        const char* User::Queries::INSERT_INTO_TABLE = "insert into pay_coll_user (User_ID,User_Name,Password,Comp_ID,Comp_Name,Comp_Address) VALUES (?,?,?,?,?,?);";
 
         // Customer Queries
 
@@ -1282,6 +1391,9 @@ namespace klok
         const char * Product::Queries::SELECT_PRODUCT_WITH_CODE_FROM_TABLE = "SELECT * FROM pos_product WHERE Code=?";
         const char * Product::Queries::DROP_PRODUCT_TABLE_QUERY = "DROP TABLE pos_product IF EXISTS;";
         const char * Product::Queries::SEARCH_PRODUCTS_BY_NAME_FROM_TABLE = "SELECT * FROM pos_product where Name LIKE '%' || @search || '%' OR ShortName LIKE '%' || @search || '%'";
+        const char * Product::Queries::DELETE_ALL_PRODUCTS_FROM_DATABASE = "delete from pos_product";
+        const char * Product::Queries::RESET_PRIMARY_KEY = "delete from sqlite_sequence where name='pos_product'";
+        const char * Product::Queries::INSERT_INTO_TABLE = "INSERT INTO pos_product (Name,ShortName,Code,SalesRate,StockQuantity) VALUES(?,?,?,?,?);";
 
         const char * Product::Queries::CREATE_PRODUCT_TABLE_QUERY =
             "CREATABLE TE pos_product ("
@@ -1305,7 +1417,7 @@ namespace klok
         const char * PosBillHeader::Queries::RESET_PRIMARY_KEY = "delete from sqlite_sequence where name='pos_bill_header'";
         const char * PosBillHeader::Queries::LIST_ALL_BILLS = "select * from pos_bill_header ORDER BY Id DESC";
         const char * PosBillHeader::Queries::DELETE_SPECIFIC_BILL = "update pos_bill_header set Is_Deleted=1,Delete_AT=? where Id=?";
-        const char * PosBillHeader::Queries::GET_ALL_NOT_DELETED = "SELECT * FROM pos_bill_header where Is_Deleted!=1 or Is_Deleted=NULL ORDER BY Id DESC";
+        const char * PosBillHeader::Queries::GET_ALL_NOT_DELETED = "SELECT * FROM pos_bill_header where Is_Deleted!=1 ORDER BY Id DESC";
 
 
         const char * PosBillHeader::Queries::CREATE_POS_BILL_HEADER_TABLE_QUERY =
@@ -1347,6 +1459,7 @@ namespace klok
         const char * PosBillItem::Queries::DROP_POS_BILL_ITEM_TABLE_QUERY = "DROP TABLE pos_bill_item IF EXISTS;";
         const char * PosBillItem::Queries::DELETE_ALL_FROM_TABLE = "DELETE FROM pos_bill_item";
         const char * PosBillItem::Queries::RESET_PRIMARY_KEY = "delete from sqlite_sequence where name='pos_bill_item'";
+        const char * PosBillItem::Queries::GET_ALL_FOR_BILL_ID = "select * from pos_bill_item where Bill_ID=?";
 
         const char * PosBillItem::Queries::CREATE_POS_BILL_ITEM_TABLE_QUERY =
             "CREATE TABLE pos_bill_item ("
